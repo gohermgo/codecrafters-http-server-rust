@@ -234,31 +234,34 @@ fn main() {
     // TODO: Make this more robust maybe CLI???
     // Make the listener
 
-    let _ = tcp::listener(socket::v4::addr::DEFAULT_GENERIC)
-        .incoming()
-        .filter_map(|tcp_ping| match tcp_ping {
-            Ok(tcp_stream) => {
-                let mut stream_buffer = vec![];
-                let bytes_received = tcp_stream
-                    .peek(&mut stream_buffer)
-                    .expect("couldnt peek da buffer");
-                log_from_mod!("bytes received", bytes_received);
-                log_from_mod!("local address");
-                let local_addr = tcp_stream.local_addr().unwrap();
-                socket::log(&local_addr);
+    let tcpl = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
+    let _ = tcpl.incoming().filter_map(|tcp_ping| match tcp_ping {
+        Ok(tcp_stream) => {
+            let mut stream_buffer = vec![];
+            let bytes_received = tcp_stream
+                .peek(&mut stream_buffer)
+                .expect("couldnt peek da buffer");
+            log_from_mod!("bytes received", bytes_received);
+            log_from_mod!("local address");
+            let local_addr = tcp_stream.local_addr().unwrap();
+            socket::log(&local_addr);
 
-                log_from_mod!("peer address");
-                let peer_addr = tcp_stream.local_addr().unwrap();
-                socket::log(&peer_addr);
+            log_from_mod!("peer address");
+            let peer_addr = tcp_stream.local_addr().unwrap();
+            socket::log(&peer_addr);
 
-                Some(tcp::listener(peer_addr))
-            }
-            Err(e) => {
-                elog_from_mod!("something weird happened", e);
-                elog_from_mod!("filtering that shit out");
-                None
-            }
-        });
+            tcp_stream
+                .shutdown(net::Shutdown::Both)
+                .expect("couldnt shutdown");
+
+            Some(())
+        }
+        Err(e) => {
+            elog_from_mod!("something weird happened", e);
+            elog_from_mod!("filtering that shit out");
+            None
+        }
+    });
     // .collect();
     // tcp_incoming.iter().for_each(|tcp_stream| {
     //     let local_addr = tcp_stream.local_addr().unwrap();
