@@ -1,7 +1,8 @@
 use std::net;
 #[allow(unused_imports)]
+#[allow(clippy::items_after_test_module)]
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream, ToSocketAddrs};
-
+use std::sync::Arc;
 #[macro_export]
 macro_rules! log_from_mod {
     // ( $msg:literal, $( $val:expr ),* ) => {
@@ -17,6 +18,11 @@ macro_rules! log_from_mod {
     // };
     ($msg:literal, $val:expr) => {
         println!("[{}] {}: {}", module_path!(), $msg, $val)
+    };
+    ( $mgs:literal, $( $val:expr ),* ) => {
+        print!("[{}] {}:", module_path!(), $msg);
+        let x = $val;
+        log_from_mod($msg, $val);
     };
     ($msg:expr, $val:expr) => {
         println!("[{}] {}: {}", module_path!(), $msg, $val)
@@ -83,6 +89,16 @@ pub mod ip {
                 // }
                 // pub use log;
             }
+            // #[cfg(test)]
+            // mod tests {
+            //     use super::*;
+            //     #[test]
+            //     fn test_local_v4() {
+            //         // TODO: handle port etc
+            //         let ip = LOCAL_V4.octets();
+            //         assert_eq!(ip, [127u8, 0u8, 0u8, 1u8]);
+            //     }
+            // }
         }
         /// Submodule to store information regarding to ports
         pub mod port {
@@ -151,24 +167,26 @@ mod socket {
 
             pub const FALLBACK_GENERIC: SocketAddr = SocketAddr::V4(FALLBACK_V4);
         }
+        pub(super) mod utils {
+            use std::net::SocketAddrV4;
+            pub fn log(addrv4: &SocketAddrV4) {
+                log_from_mod!("socket ip", addrv4.ip());
+                log_from_mod!("socket port", &addrv4.port());
+            }
+        }
     }
 
     use super::SocketAddr::{self, V4, V6};
-    pub fn log(socketaddr: SocketAddr) {
+    pub fn log(socketaddr: &SocketAddr) {
         match socketaddr {
-            V4(a) => {
-                log_from_mod!("address", a.ip());
-                // addr::utils::log(a.ip());
-                // port::utils::log(&a.port());
-                log_from_mod!("   port", &a.port());
-            }
+            V4(addrv4) => v4::utils::log(addrv4),
             V6(_a) => unimplemented!(),
         }
     }
 }
 
 mod tcp {
-    use super::{SocketAddr, TcpListener};
+    use super::{socket, SocketAddr, TcpListener, TcpStream};
     /// Creates a `TcpListener` by attempting to bind to the
     /// passed `SocketAddr`.
     ///
@@ -179,8 +197,11 @@ mod tcp {
     /// will be bound to empty
     pub fn listener(socketaddr: SocketAddr) -> TcpListener {
         // println!("{} attempting to bind tcplistener", module_path!());
+
+        // Log info regarding binding
         log_from_mod!("attempting to bind tcplistener");
-        super::socket::log(socketaddr);
+        socket::log(&socketaddr);
+
         match socketaddr {
             SocketAddr::V4(socket_address) => match TcpListener::bind(socket_address) {
                 Ok(tcplistener) => {
@@ -196,60 +217,116 @@ mod tcp {
             SocketAddr::V6(_socket_address) => unimplemented!(),
         }
     }
+
+    // pub fn accept_on_thread(tcplistener: &TcpListener) -> (TcpS) {
+    //     log_from_mod!("attempting to create thread for incoming streams")
+    //     let local_addr = tcplistener.local_addr().unwrap();
+    //     socket::log(&local_addr);
+    //     log_from_mod!("resolved local address, starting")
+
+    //     tcplistener.accept()
+    // }
 }
+
 fn main() {
     log_from_mod!("entering main");
     // TODO: Make this more robust maybe CLI???
-    let stream_buffers: Vec<Vec<u8>> = tcp::listener(socket::v4::addr::DEFAULT_GENERIC)
+    // Make the listener
+
+    let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
+    let tcp_incoming: Vec<TcpListener> = tcp_listener
         .incoming()
-        .filter_map(|tcpstream| match tcpstream {
-            Ok(incoming_stream) => {
-                // println!("{} accepted new connection", module_path!());
-                log_from_mod!("tcplistener accepted new connection");
-                Some(incoming_stream)
+        .filter_map(|tcp_ping| match tcp_ping {
+            Ok(tcp_stream) => {
+                let local_addr = tcp_stream.local_addr().unwrap();
+                socket::log(&local_addr);
+
+                log_from_mod!("new connection from");
+
+                let peer_addr = tcp_stream.local_addr().unwrap();
+                socket::log(&peer_addr);
+
+                Some(tcp::listener(peer_addr))
             }
             Err(e) => {
-                elog_from_mod!("tcplistener failed to accept connection", e);
-                elog_from_mod!("filtering...");
-                // eprintln!("{} error accepting connection, error {}", module_path!(), e);
+                elog_from_mod!("something weird happened", e);
+                elog_from_mod!("filtering that shit out");
                 None
             }
         })
-        .map(|tcpstream| {
-            let stream_peer_addr = tcpstream.peer_addr().unwrap();
-            let stream_local_addr = tcpstream.local_addr().unwrap();
-
-            log_from_mod!("stream peer address", stream_peer_addr);
-            log_from_mod!("stream local address", stream_local_addr);
-            // println!("{} attempting to read from [peer: {}] [local: {}]", module_path!(), stream_peer_addr, stream_local_addr);
-
-            let mut tcpbuffer: Vec<u8> = vec![];
-
-            if let Ok(bytes_returned) = tcpstream.peek(&mut tcpbuffer) {
-                log_from_mod!("bytes read", bytes_returned);
-                // log_from_mod!("buffer contents", tcpbuffer.iter().map(|byte| byte.as_char()).join(", "));
-            } else {
-                log_from_mod!("bytes read", 0usize);
-            };
-
-            tcpbuffer
-        })
         .collect();
-    stream_buffers
-        .iter()
-        .enumerate()
-        .for_each(|(buffer_index, buffer_segment)| {
-            log_from_mod!("dumping buffer data for buffer", buffer_index);
-            buffer_segment
-                .iter()
-                .enumerate()
-                .for_each(|(buffer_data_index, buffer_data_point)| {
-                    log_from_mod!(
-                        format!("data index {}", buffer_data_index),
-                        buffer_data_point
-                    );
-                });
-        });
+    tcp_incoming.iter().for_each(|tcp_stream| {
+        let local_addr = tcp_stream.local_addr().unwrap();
+        socket::log(&local_addr);
+    });
+    // let stream_buffers: Vec<TcpStream> = tcp_listener
+    //     .incoming()
+    //     .filter_map(|tcpstream| match tcpstream {
+    //         Ok(incoming_stream) => {
+    //             // println!("{} accepted new connection", module_path!());
+    //             log_from_mod!("");
+    //             Some(incoming_stream)
+    //         }
+    //         Err(e) => {
+    //             elog_from_mod!("filtering...");
+    //             // eprintln!("{} error accepting connection, error {}", module_path!(), e);
+    //             None
+    //         }
+    //     })
+    //     .collect();
+    // let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
+    // let stream_buffers: Vec<TcpStream> = tcp_listener
+    //     .incoming()
+    //     .filter_map(|tcpstream| match tcpstream {
+    //         Ok(incoming_stream) => {
+    //             // println!("{} accepted new connection", module_path!());
+    //             log_from_mod!("");
+    //             Some(incoming_stream)
+    //         }
+    //         Err(e) => {
+    //             elog_from_mod!("tcplistener failed to accept connection", e);
+    //             elog_from_mod!("filtering...");
+    //             // eprintln!("{} error accepting connection, error {}", module_path!(), e);
+    //             None
+    //         }
+    //     })
+    //     .collect();
+    // stream_buffers.iter().for_each(|incoming_stream| {
+
+    // });
+    // .map(|tcpstream| {
+    //     let stream_peer_addr = tcpstream.peer_addr().unwrap();
+
+    //     log_from_mod!("connection made from", stream_peer_addr);
+    //     // println!("{} attempting to read from [peer: {}] [local: {}]", module_path!(), stream_peer_addr, stream_local_addr);
+
+    //     let mut tcpbuffer: Vec<u8> = vec![];
+
+    //     if let Ok(bytes_returned) = tcpstream.peek(&mut tcpbuffer) {
+    //         log_from_mod!("bytes read", bytes_returned);
+    //         // log_from_mod!("buffer contents", tcpbuffer.iter().map(|byte| byte.as_char()).join(", "));
+    //     } else {
+    //         log_from_mod!("bytes read", 0usize);
+    //     };
+
+    //     tcpbuffer
+    // })
+    // .collect();
+    // stream_buffers
+    //     .iter()
+    //     .enumerate()
+    //     .for_each(|(buffer_index, buffer_segment)| {
+    //         log_from_mod!("dumping buffer data for buffer", buffer_index);
+    //         buffer_segment
+    //             .iter()
+    //             .enumerate()
+    //             .for_each(|(buffer_data_index, buffer_data_point)| {
+    //                 log_from_mod!(
+    //                     format!("data index {}", buffer_data_index),
+    //                     buffer_data_point
+    //                 );
+    //             });
+    //     });
     // let listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
 
     // let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
