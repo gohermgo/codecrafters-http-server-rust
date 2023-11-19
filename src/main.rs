@@ -230,6 +230,7 @@ mod tcp {
     // }
 }
 
+const GET_MAX_SIZE: usize = 1024;
 const HTTP_OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
 
 use std::io::{Read, Write};
@@ -244,55 +245,77 @@ fn main() {
         .for_each(|tcp_stream| match tcp_stream {
             Ok(mut stream) => {
                 log_from_mod!("new incoming connection");
-                match stream.write(HTTP_OK.as_bytes()) {
+
+                log_from_mod!("attempting write");
+
+                let _n_written = match stream.write(HTTP_OK.as_bytes()) {
                     Ok(bytes_written) => {
-                        log_from_mod!("replied, bytes written", bytes_written);
-                        let mut stream_buffer: Vec<u8> = vec![];
-                        log_from_mod!("attempting to read open stream");
-                        match stream.read(&mut stream_buffer) {
-                            Ok(bytes_read) => {
-                                log_from_mod!("got response, bytes read", bytes_read);
-                                for byte_value in stream_buffer {
-                                    log_from_mod!("read byte", byte_value);
-                                }
-                            }
-                            Err(e) => {
-                                elog_from_mod!("error reading from previously valid stream", e)
-                            }
-                        }
+                        log_from_mod!("bytes written", bytes_written);
+                        bytes_written
                     }
-                    Err(e) => elog_from_mod!("iffy error upon writing", e),
+                    Err(e) => {
+                        elog_from_mod!("write failed", e);
+                        0usize
+                    }
+                };
+
+                let mut stream_buffer = [0u8; GET_MAX_SIZE];
+                let n_read = match stream.read(&mut stream_buffer) {
+                    Ok(bytes_read) => {
+                        log_from_mod!("bytes written", bytes_read);
+                        bytes_read
+                        // let mut stream_buffer: Vec<u8> = vec![];
+                        // log_from_mod!("attempting to read open stream");
+                        // match stream.read(&mut stream_buffer) {
+                        //     Ok(bytes_read) => {
+                        //         log_from_mod!("got response, bytes read", bytes_read);
+                        //         for byte_value in stream_buffer {
+                        //             log_from_mod!("read byte", byte_value);
+                        //         }
+                        //     }
+                        //     Err(e) => {
+                        //         elog_from_mod!("error reading from previously valid stream", e)
+                        //     }
+                        // }
+                    }
+                    Err(e) => {
+                        elog_from_mod!("iffy error upon writing", e);
+                        0usize
+                    }
+                };
+                for byte_data in stream_buffer {
+                    log_from_mod!("byte received", byte_data);
                 }
             }
             Err(e) => elog_from_mod!("iffy error upon opening stream", e),
         })
-    // open_streams.iter_mut().for_each(|stream| {
-    //     let mut stream_buffer: Vec<u8> = vec![];
-    //     log_from_mod!("attempting to read open stream");
-    //     match stream.read(&mut stream_buffer) {
-    //         Ok(bytes_read) => {
-    //             log_from_mod!("got response, bytes read", bytes_read);
-    //             for byte_value in stream_buffer {
-    //                 log_from_mod!("read byte", byte_value);
-    //             }
-    //         }
-    //         Err(e) => elog_from_mod!("error reading from previously valid stream", e),
-    //     }
-    // });
-    // for stream in tcp::listener(socket::v4::addr::DEFAULT_GENERIC).incoming() {
-    //     match stream {
-    //         Ok(mut s) => {
-    //             log_from_mod!("new connection");
-    //             match s.write(HTTP_OK.as_bytes()) {
-    //                 Ok(bytes_writen) => {
-    //                     log_from_mod!("wrote to connection, bytecount", bytes_writen)
-    //                 }
-    //                 Err(e) => elog_from_mod!("iffy error", e),
-    //             }
-    //         }
-    //         Err(e) => {
-    //             elog_from_mod!("iffy error", e);
-    //         }
-    //     }
-    // }
 }
+// open_streams.iter_mut().for_each(|stream| {
+//     let mut stream_buffer: Vec<u8> = vec![];
+//     log_from_mod!("attempting to read open stream");
+//     match stream.read(&mut stream_buffer) {
+//         Ok(bytes_read) => {
+//             log_from_mod!("got response, bytes read", bytes_read);
+//             for byte_value in stream_buffer {
+//                 log_from_mod!("read byte", byte_value);
+//             }
+//         }
+//         Err(e) => elog_from_mod!("error reading from previously valid stream", e),
+//     }
+// });
+// for stream in tcp::listener(socket::v4::addr::DEFAULT_GENERIC).incoming() {
+//     match stream {
+//         Ok(mut s) => {
+//             log_from_mod!("new connection");
+//             match s.write(HTTP_OK.as_bytes()) {
+//                 Ok(bytes_writen) => {
+//                     log_from_mod!("wrote to connection, bytecount", bytes_writen)
+//                 }
+//                 Err(e) => elog_from_mod!("iffy error", e),
+//             }
+//         }
+//         Err(e) => {
+//             elog_from_mod!("iffy error", e);
+//         }
+//     }
+// }
