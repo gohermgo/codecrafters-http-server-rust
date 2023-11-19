@@ -3,6 +3,7 @@ use std::net;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream, ToSocketAddrs};
 #[allow(unused_imports)]
 use std::sync::Arc;
+// wow what a cool comment
 #[macro_export]
 macro_rules! log_from_mod {
     // ( $msg:literal, $( $val:expr ),* ) => {
