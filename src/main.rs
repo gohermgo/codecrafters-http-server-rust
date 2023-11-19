@@ -231,141 +231,62 @@ mod tcp {
 
 const HTTP_OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
 
-use std::io::Write;
+use std::io::{Read, Write};
 fn main() {
     log_from_mod!("entering main");
     // TODO: Make this more robust maybe CLI???
     // Make the listener
 
-    // let tcpl = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
-    for stream in tcp::listener(socket::v4::addr::DEFAULT_GENERIC).incoming() {
-        match stream {
-            Ok(mut s) => {
-                log_from_mod!("new connection");
-                match s.write(HTTP_OK.as_bytes()) {
-                    Ok(bytes_writen) => {
-                        log_from_mod!("wrote to connection, bytecount", bytes_writen)
+    let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
+    let mut open_streams: Vec<TcpStream> = tcp_listener
+        .incoming()
+        .filter_map(|tcp_stream| match tcp_stream {
+            Ok(mut stream) => {
+                log_from_mod!("new incoming connection");
+                match stream.write(HTTP_OK.as_bytes()) {
+                    Ok(bytes_written) => {
+                        log_from_mod!("replied, bytes written", bytes_written);
+                        Some(stream)
                     }
-                    Err(e) => elog_from_mod!("iffy error", e),
+                    Err(e) => {
+                        elog_from_mod!("iffy error upon writing", e);
+                        None
+                    }
                 }
             }
             Err(e) => {
-                elog_from_mod!("iffy error", e);
+                elog_from_mod!("iffy error upon opening stream", e);
+                None
             }
+        })
+        .collect();
+    open_streams.iter_mut().for_each(|stream| {
+        let mut stream_buffer: Vec<u8> = vec![];
+        log_from_mod!("attempting to read open stream");
+        match stream.read(&mut stream_buffer) {
+            Ok(bytes_read) => {
+                log_from_mod!("got response, bytes read", bytes_read);
+                for byte_value in stream_buffer {
+                    log_from_mod!("read byte", byte_value);
+                }
+            }
+            Err(e) => elog_from_mod!("error reading from previously valid stream", e),
         }
-    }
-
-    // let _ = tcpl.incoming().filter_map(|tcp_ping| match tcp_ping {
-    //     Ok(tcp_stream) => {
-    //         let mut stream_buffer = vec![];
-    //         let bytes_received = tcp_stream
-    //             .peek(&mut stream_buffer)
-    //             .expect("couldnt peek da buffer");
-    //         log_from_mod!("bytes received", bytes_received);
-    //         log_from_mod!("local address");
-    //         let local_addr = tcp_stream.local_addr().unwrap();
-    //         socket::log(&local_addr);
-
-    //         log_from_mod!("peer address");
-    //         let peer_addr = tcp_stream.local_addr().unwrap();
-    //         socket::log(&peer_addr);
-
-    //         tcp_stream
-    //             .shutdown(net::Shutdown::Both)
-    //             .expect("couldnt shutdown");
-
-    //         Some(())
-    //     }
-    //     Err(e) => {
-    //         elog_from_mod!("something weird happened", e);
-    //         elog_from_mod!("filtering that shit out");
-    //         None
-    //     }
-    // });
-    // .collect();
-    // tcp_incoming.iter().for_each(|tcp_stream| {
-    //     let local_addr = tcp_stream.local_addr().unwrap();
-    //     socket::log(&local_addr);
-    // });
-    // let stream_buffers: Vec<TcpStream> = tcp_listener
-    //     .incoming()
-    //     .filter_map(|tcpstream| match tcpstream {
-    //         Ok(incoming_stream) => {
-    //             // println!("{} accepted new connection", module_path!());
-    //             log_from_mod!("");
-    //             Some(incoming_stream)
+    });
+    // for stream in tcp::listener(socket::v4::addr::DEFAULT_GENERIC).incoming() {
+    //     match stream {
+    //         Ok(mut s) => {
+    //             log_from_mod!("new connection");
+    //             match s.write(HTTP_OK.as_bytes()) {
+    //                 Ok(bytes_writen) => {
+    //                     log_from_mod!("wrote to connection, bytecount", bytes_writen)
+    //                 }
+    //                 Err(e) => elog_from_mod!("iffy error", e),
+    //             }
     //         }
     //         Err(e) => {
-    //             elog_from_mod!("filtering...");
-    //             // eprintln!("{} error accepting connection, error {}", module_path!(), e);
-    //             None
+    //             elog_from_mod!("iffy error", e);
     //         }
-    //     })
-    //     .collect();
-    // let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
-    // let stream_buffers: Vec<TcpStream> = tcp_listener
-    //     .incoming()
-    //     .filter_map(|tcpstream| match tcpstream {
-    //         Ok(incoming_stream) => {
-    //             // println!("{} accepted new connection", module_path!());
-    //             log_from_mod!("");
-    //             Some(incoming_stream)
-    //         }
-    //         Err(e) => {
-    //             elog_from_mod!("tcplistener failed to accept connection", e);
-    //             elog_from_mod!("filtering...");
-    //             // eprintln!("{} error accepting connection, error {}", module_path!(), e);
-    //             None
-    //         }
-    //     })
-    //     .collect();
-    // stream_buffers.iter().for_each(|incoming_stream| {
-
-    // });
-    // .map(|tcpstream| {
-    //     let stream_peer_addr = tcpstream.peer_addr().unwrap();
-
-    //     log_from_mod!("connection made from", stream_peer_addr);
-    //     // println!("{} attempting to read from [peer: {}] [local: {}]", module_path!(), stream_peer_addr, stream_local_addr);
-
-    //     let mut tcpbuffer: Vec<u8> = vec![];
-
-    //     if let Ok(bytes_returned) = tcpstream.peek(&mut tcpbuffer) {
-    //         log_from_mod!("bytes read", bytes_returned);
-    //         // log_from_mod!("buffer contents", tcpbuffer.iter().map(|byte| byte.as_char()).join(", "));
-    //     } else {
-    //         log_from_mod!("bytes read", 0usize);
-    //     };
-
-    //     tcpbuffer
-    // })
-    // .collect();
-    // stream_buffers
-    //     .iter()
-    //     .enumerate()
-    //     .for_each(|(buffer_index, buffer_segment)| {
-    //         log_from_mod!("dumping buffer data for buffer", buffer_index);
-    //         buffer_segment
-    //             .iter()
-    //             .enumerate()
-    //             .for_each(|(buffer_data_index, buffer_data_point)| {
-    //                 log_from_mod!(
-    //                     format!("data index {}", buffer_data_index),
-    //                     buffer_data_point
-    //                 );
-    //             });
-    //     });
-    // let listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
-
-    // let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
-    // for stream in listener.incoming() {
-    // match stream {
-    //     Ok(_stream) => {
-    //         println!("accepted new connection");
     //     }
-    //     Err(e) => {
-    //         println!("error: {}", e);
-    //     }
-    // }
     // }
 }
