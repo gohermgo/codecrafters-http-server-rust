@@ -1,7 +1,7 @@
 use std::net;
 #[allow(unused_imports)]
-#[allow(clippy::items_after_test_module)]
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream, ToSocketAddrs};
+#[allow(unused_imports)]
 use std::sync::Arc;
 #[macro_export]
 macro_rules! log_from_mod {
@@ -186,6 +186,7 @@ mod socket {
 }
 
 mod tcp {
+    #[allow(unused_imports)]
     use super::{socket, SocketAddr, TcpListener, TcpStream};
     /// Creates a `TcpListener` by attempting to bind to the
     /// passed `SocketAddr`.
@@ -233,11 +234,15 @@ fn main() {
     // TODO: Make this more robust maybe CLI???
     // Make the listener
 
-    let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
-    let tcp_incoming: Vec<TcpListener> = tcp_listener
+    let _ = tcp::listener(socket::v4::addr::DEFAULT_GENERIC)
         .incoming()
         .filter_map(|tcp_ping| match tcp_ping {
             Ok(tcp_stream) => {
+                let mut stream_buffer = vec![];
+                let bytes_received = tcp_stream
+                    .peek(&mut stream_buffer)
+                    .expect("couldnt peek da buffer");
+                log_from_mod!("bytes received", bytes_received);
                 log_from_mod!("local address");
                 let local_addr = tcp_stream.local_addr().unwrap();
                 socket::log(&local_addr);
@@ -253,12 +258,12 @@ fn main() {
                 elog_from_mod!("filtering that shit out");
                 None
             }
-        })
-        .collect();
-    tcp_incoming.iter().for_each(|tcp_stream| {
-        let local_addr = tcp_stream.local_addr().unwrap();
-        socket::log(&local_addr);
-    });
+        });
+    // .collect();
+    // tcp_incoming.iter().for_each(|tcp_stream| {
+    //     let local_addr = tcp_stream.local_addr().unwrap();
+    //     socket::log(&local_addr);
+    // });
     // let stream_buffers: Vec<TcpStream> = tcp_listener
     //     .incoming()
     //     .filter_map(|tcpstream| match tcpstream {
