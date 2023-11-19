@@ -238,11 +238,11 @@ fn main() {
         .incoming()
         .filter_map(|tcp_ping| match tcp_ping {
             Ok(tcp_stream) => {
+                log_from_mod!("local address");
                 let local_addr = tcp_stream.local_addr().unwrap();
                 socket::log(&local_addr);
 
-                log_from_mod!("new connection from");
-
+                log_from_mod!("peer address");
                 let peer_addr = tcp_stream.local_addr().unwrap();
                 socket::log(&peer_addr);
 
