@@ -239,41 +239,46 @@ fn main() {
     // Make the listener
 
     let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
-    let mut open_streams: Vec<TcpStream> = tcp_listener
+    tcp_listener
         .incoming()
-        .filter_map(|tcp_stream| match tcp_stream {
+        .for_each(|tcp_stream| match tcp_stream {
             Ok(mut stream) => {
                 log_from_mod!("new incoming connection");
                 match stream.write(HTTP_OK.as_bytes()) {
                     Ok(bytes_written) => {
                         log_from_mod!("replied, bytes written", bytes_written);
-                        Some(stream)
+                        let mut stream_buffer: Vec<u8> = vec![];
+                        log_from_mod!("attempting to read open stream");
+                        match stream.read(&mut stream_buffer) {
+                            Ok(bytes_read) => {
+                                log_from_mod!("got response, bytes read", bytes_read);
+                                for byte_value in stream_buffer {
+                                    log_from_mod!("read byte", byte_value);
+                                }
+                            }
+                            Err(e) => {
+                                elog_from_mod!("error reading from previously valid stream", e)
+                            }
+                        }
                     }
-                    Err(e) => {
-                        elog_from_mod!("iffy error upon writing", e);
-                        None
-                    }
+                    Err(e) => elog_from_mod!("iffy error upon writing", e),
                 }
             }
-            Err(e) => {
-                elog_from_mod!("iffy error upon opening stream", e);
-                None
-            }
+            Err(e) => elog_from_mod!("iffy error upon opening stream", e),
         })
-        .collect();
-    open_streams.iter_mut().for_each(|stream| {
-        let mut stream_buffer: Vec<u8> = vec![];
-        log_from_mod!("attempting to read open stream");
-        match stream.read(&mut stream_buffer) {
-            Ok(bytes_read) => {
-                log_from_mod!("got response, bytes read", bytes_read);
-                for byte_value in stream_buffer {
-                    log_from_mod!("read byte", byte_value);
-                }
-            }
-            Err(e) => elog_from_mod!("error reading from previously valid stream", e),
-        }
-    });
+    // open_streams.iter_mut().for_each(|stream| {
+    //     let mut stream_buffer: Vec<u8> = vec![];
+    //     log_from_mod!("attempting to read open stream");
+    //     match stream.read(&mut stream_buffer) {
+    //         Ok(bytes_read) => {
+    //             log_from_mod!("got response, bytes read", bytes_read);
+    //             for byte_value in stream_buffer {
+    //                 log_from_mod!("read byte", byte_value);
+    //             }
+    //         }
+    //         Err(e) => elog_from_mod!("error reading from previously valid stream", e),
+    //     }
+    // });
     // for stream in tcp::listener(socket::v4::addr::DEFAULT_GENERIC).incoming() {
     //     match stream {
     //         Ok(mut s) => {
