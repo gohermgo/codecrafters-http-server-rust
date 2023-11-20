@@ -325,10 +325,10 @@ mod http {
                 headers,
             }
         }
-        pub fn handle(&self) -> &str {
+        pub fn handle(&self) -> String {
             match self.method {
                 Method::Get => match self.path.to_str().unwrap() {
-                    "/" => OK,
+                    "/" => OK.to_string(),
                     path_string => {
                         let path_segments = path_string.split('/').collect::<Vec<&str>>();
                         path_segments
@@ -353,12 +353,12 @@ mod http {
                                 // .as_str();
                                 let (_, message) = path_string.split_at("/echo".len());
                                 // let message = path_string[path_string.find('/')..path_string.len()]
-                                let constructed = stringify!(
+                                let constructed = format!(
                                     "{}{}",
                                     OK,
-                                    vec![
+                                    [
                                         "Content-Type: text/plain",
-                                        stringify!("Content-Length: {}", content_length),
+                                        format!("Content-Length: {}", content_length).as_str(),
                                         message
                                     ]
                                     .join("\r\n")
@@ -377,7 +377,7 @@ mod http {
                                 // .join("\r\n")
                                 // .as_str();
                             }
-                            _ => NOT_FOUND,
+                            _ => NOT_FOUND.to_string(),
                         }
                     } // _ => NOT_FOUND,
                 },
