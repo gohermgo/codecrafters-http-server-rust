@@ -258,7 +258,8 @@ mod http {
                 .iter()
                 .map(|elem| *elem as char)
                 .collect::<String>();
-            log_from_mod!("parsing message", message);
+            // log_from_mod!("parsing message", message);
+            log_from_mod!("parsing request");
             let mut message_components = message.lines();
             let start_line = message_components.nth(0).unwrap();
             log_from_mod!("start line", start_line);
@@ -297,6 +298,7 @@ mod http {
                 },
             }
         }
+        #[allow(dead_code)]
         pub fn log(&self) {
             self.method.log();
             log_from_mod!("http path", self.path);
@@ -359,8 +361,8 @@ fn main() {
                 };
                 // let buffer = stream_buffer[0.._n_read];
                 let req = http::Request::new(&stream_buffer, _n_read);
-                log_from_mod!("dumping request");
-                req.log();
+                // log_from_mod!("dumping request");
+                // req.log();
                 let res = req.handle();
                 log_from_mod!("attempting response");
                 let _n_written = match stream.write(res.as_bytes()) {
