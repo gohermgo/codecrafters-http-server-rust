@@ -364,6 +364,7 @@ mod http {
                                     .join("\r\n")
                                     .as_str(),
                                 );
+                                println!("constructed {}", constructed);
                                 log_from_mod!("constructed as", constructed);
                                 constructed
                                 // .concat()
