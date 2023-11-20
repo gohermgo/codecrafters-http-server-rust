@@ -262,6 +262,10 @@ mod http {
                 value: components[1].to_string(),
             }
         }
+        pub fn log(&self) {
+            log_from_mod!("request header key", self.key);
+            log_from_mod!("request header value", self.value);
+        }
     }
     #[allow(dead_code)]
     pub struct Request {
@@ -302,13 +306,15 @@ mod http {
             let version = start_line_iter.nth(0).unwrap().to_string();
             log_from_mod!("version string", version);
 
-            let headers = message_components.nth(0).unwrap();
-            log_from_mod!("headers", headers);
+            let headers: Vec<Header> = message_components.map(Header::new).collect();
+            headers.iter().for_each(Header::log);
+            // let headers = message_components.nth(0).unwrap();
+            // log_from_mod!("headers", headers);
             Self {
                 method,
                 path,
                 version,
-                headers: headers.lines().map(Header::new).collect(),
+                headers,
             }
         }
         pub fn handle(&self) -> &str {
