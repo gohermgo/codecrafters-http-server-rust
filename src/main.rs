@@ -260,9 +260,9 @@ fn main() {
                 };
 
                 let mut stream_buffer = [0u8; GET_MAX_SIZE];
-                let n_read = match stream.read(&mut stream_buffer) {
+                let _n_read = match stream.read(&mut stream_buffer) {
                     Ok(bytes_read) => {
-                        log_from_mod!("bytes written", bytes_read);
+                        log_from_mod!("bytes read", bytes_read);
                         bytes_read
                         // let mut stream_buffer: Vec<u8> = vec![];
                         // log_from_mod!("attempting to read open stream");
@@ -279,13 +279,19 @@ fn main() {
                         // }
                     }
                     Err(e) => {
-                        elog_from_mod!("iffy error upon writing", e);
+                        elog_from_mod!("read failed", e);
                         0usize
                     }
                 };
-                for byte_data in stream_buffer {
-                    log_from_mod!("byte received", byte_data);
-                }
+                let stream_data = stream_buffer[0.._n_read]
+                    .iter()
+                    .map(|elem| *elem as char)
+                    .collect::<String>();
+                // let x = stream_buffer.map(|elem| elem as char);
+                // for byte_data in stream_buffer {
+                // log_from_mod!("byte received", byte_data);
+                // }
+                log_from_mod!("received message", stream_data);
             }
             Err(e) => elog_from_mod!("iffy error upon opening stream", e),
         })
