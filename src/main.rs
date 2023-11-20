@@ -232,6 +232,9 @@ mod tcp {
 
 mod http {
     use std::path::PathBuf;
+    #[allow(dead_code)]
+    const OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
+    const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
 
     enum Method {
         Get,
@@ -243,10 +246,11 @@ mod http {
             }
         }
     }
+    #[allow(dead_code)]
     pub struct Request {
         method: Method,
         path: PathBuf,
-        version: [u8; 2],
+        version: String,
     }
     impl Request {
         pub fn new(buffer: &[u8; super::GET_MAX_SIZE], bytes_read: usize) -> Self {
@@ -276,28 +280,33 @@ mod http {
             log_from_mod!("path string", path_string);
             let path = PathBuf::from(path_string);
 
-            let version_string = start_line_iter.nth(0).unwrap();
-            log_from_mod!("version string", version_string);
+            let version = start_line_iter.nth(0).unwrap().to_string();
+            log_from_mod!("version string", version);
 
             Self {
                 method,
                 path,
-                version: [1u8, 1u8],
+                version,
+            }
+        }
+        pub fn handle(&self) -> &str {
+            match self.method {
+                Method::Get => match self.path.to_str().unwrap() {
+                    "/" => OK,
+                    _ => NOT_FOUND,
+                },
             }
         }
         pub fn log(&self) {
             self.method.log();
             log_from_mod!("http path", self.path);
-            log_from_mod!(
-                "http version",
-                stringify!("{}.{}", self.version[0], self.version[1])
-            );
+            log_from_mod!("http version", self.version);
         }
     }
 }
 const GET_MAX_SIZE: usize = 1024;
-const HTTP_OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
 
+#[allow(unused_imports)]
 use std::io::{Read, Write};
 fn main() {
     log_from_mod!("entering main");
@@ -350,7 +359,20 @@ fn main() {
                 };
                 // let buffer = stream_buffer[0.._n_read];
                 let req = http::Request::new(&stream_buffer, _n_read);
+                log_from_mod!("dumping request");
                 req.log();
+                let res = req.handle();
+                log_from_mod!("attempting response");
+                let _n_written = match stream.write(res.as_bytes()) {
+                    Ok(bytes_written) => {
+                        log_from_mod!("bytes written", bytes_written);
+                        bytes_written
+                    }
+                    Err(e) => {
+                        elog_from_mod!("write failed", e);
+                        0usize
+                    }
+                };
                 // let req = http::Request::new(stream_buffer, _n_read);
                 // let stream_data = stream_buffer[0.._n_read]
                 //     .iter()
