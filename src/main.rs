@@ -353,7 +353,7 @@ mod http {
                                 // .as_str();
                                 let (_, message) = path_string.split_at("/echo".len());
                                 // let message = path_string[path_string.find('/')..path_string.len()]
-                                stringify!(
+                                let constructed = stringify!(
                                     "{}{}",
                                     OK,
                                     vec![
@@ -363,7 +363,9 @@ mod http {
                                     ]
                                     .join("\r\n")
                                     .as_str(),
-                                )
+                                );
+                                log_from_mod!("constructed as", constructed);
+                                constructed
                                 // .concat()
                                 // .as_str()
                                 // let start_line = OK;
