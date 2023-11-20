@@ -331,6 +331,9 @@ mod http {
                     "/" => OK,
                     path_string => {
                         let path_segments = path_string.split('/').collect::<Vec<&str>>();
+                        path_segments
+                            .iter()
+                            .for_each(|seg| log_from_mod!("segment", seg));
                         let content_length =
                             path_segments.get(1).map_or(0u8, |msg| msg.len() as u8);
                         match path_segments[0] {
