@@ -231,7 +231,7 @@ mod tcp {
 }
 
 mod http {
-    use std::path::PathBuf;
+    use std::{fmt::Display, path::PathBuf};
     #[allow(dead_code)]
     const OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
     const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -247,9 +247,15 @@ mod http {
         }
     }
     #[allow(dead_code)]
+    #[derive(Debug)]
     pub struct Header {
         key: String,
         value: String,
+    }
+    impl Display for Header {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}: {}", self.key, self.value)
+        }
     }
     impl Header {
         pub fn new(header_string: &str) -> Option<Self> {
@@ -265,10 +271,6 @@ mod http {
                     value: components[1].to_string(),
                 })
             }
-        }
-        pub fn log(&self) {
-            log_from_mod!("request header key", self.key);
-            log_from_mod!("request header value", self.value);
         }
     }
     #[allow(dead_code)]
@@ -311,7 +313,9 @@ mod http {
             log_from_mod!("version string", version);
 
             let headers: Vec<Header> = message_components.filter_map(Header::new).collect();
-            headers.iter().for_each(Header::log);
+            headers
+                .iter()
+                .for_each(|header| log_from_mod!("request header", header));
             // let headers = message_components.nth(0).unwrap();
             // log_from_mod!("headers", headers);
             Self {
