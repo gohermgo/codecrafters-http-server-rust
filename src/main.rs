@@ -247,10 +247,28 @@ mod http {
         }
     }
     #[allow(dead_code)]
+    pub struct Header {
+        key: String,
+        value: String,
+    }
+    impl Header {
+        pub fn new(header_string: &str) -> Self {
+            let components = header_string
+                .split(':')
+                .map(|s| s.trim())
+                .collect::<Vec<&str>>();
+            Self {
+                key: components[0].to_string(),
+                value: components[1].to_string(),
+            }
+        }
+    }
+    #[allow(dead_code)]
     pub struct Request {
         method: Method,
         path: PathBuf,
         version: String,
+        headers: Vec<Header>,
     }
     impl Request {
         pub fn new(buffer: &[u8; super::GET_MAX_SIZE], bytes_read: usize) -> Self {
@@ -284,10 +302,13 @@ mod http {
             let version = start_line_iter.nth(0).unwrap().to_string();
             log_from_mod!("version string", version);
 
+            let headers = message_components.nth(0).unwrap();
+            log_from_mod!("headers", headers);
             Self {
                 method,
                 path,
                 version,
+                headers: headers.lines().map(Header::new).collect(),
             }
         }
         pub fn handle(&self) -> &str {
