@@ -236,6 +236,13 @@ mod http {
     enum Method {
         Get,
     }
+    impl Method {
+        pub fn log(&self) {
+            match self {
+                Method::Get => log_from_mod!("http method GET"),
+            }
+        }
+    }
     pub struct Request {
         method: Method,
         path: PathBuf,
@@ -243,8 +250,10 @@ mod http {
     }
     impl Request {
         pub fn new(buffer: &[u8; super::GET_MAX_SIZE], bytes_read: usize) -> Self {
-            // let message = buffer[0..bytes_read]
-            let message = buffer.iter().map(|elem| *elem as char).collect::<String>();
+            let message = buffer[0..bytes_read]
+                .iter()
+                .map(|elem| *elem as char)
+                .collect::<String>();
             log_from_mod!("parsing message", message);
             let mut message_components = message.lines();
             let start_line = message_components.nth(0).unwrap();
@@ -276,6 +285,14 @@ mod http {
                 version: [1u8, 1u8],
             }
         }
+        pub fn log(&self) {
+            self.method.log();
+            log_from_mod!("http path", self.path);
+            log_from_mod!(
+                "http version",
+                stringify!("{}.{}", self.version[0], self.version[1])
+            );
+        }
     }
 }
 const GET_MAX_SIZE: usize = 1024;
@@ -294,18 +311,18 @@ fn main() {
             Ok(mut stream) => {
                 log_from_mod!("new incoming connection");
 
-                log_from_mod!("attempting write");
+                // log_from_mod!("attempting write");
 
-                let _n_written = match stream.write(HTTP_OK.as_bytes()) {
-                    Ok(bytes_written) => {
-                        log_from_mod!("bytes written", bytes_written);
-                        bytes_written
-                    }
-                    Err(e) => {
-                        elog_from_mod!("write failed", e);
-                        0usize
-                    }
-                };
+                // let _n_written = match stream.write(HTTP_OK.as_bytes()) {
+                //     Ok(bytes_written) => {
+                //         log_from_mod!("bytes written", bytes_written);
+                //         bytes_written
+                //     }
+                //     Err(e) => {
+                //         elog_from_mod!("write failed", e);
+                //         0usize
+                //     }
+                // };
 
                 let mut stream_buffer = [0u8; GET_MAX_SIZE];
                 let _n_read = match stream.read(&mut stream_buffer) {
@@ -333,6 +350,7 @@ fn main() {
                 };
                 // let buffer = stream_buffer[0.._n_read];
                 let req = http::Request::new(&stream_buffer, _n_read);
+                req.log();
                 // let req = http::Request::new(stream_buffer, _n_read);
                 // let stream_data = stream_buffer[0.._n_read]
                 //     .iter()
