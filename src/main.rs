@@ -354,7 +354,7 @@ mod http {
                                 let (_, message) = path_string.split_at("/echo".len());
                                 // let message = path_string[path_string.find('/')..path_string.len()]
                                 let constructed = format!(
-                                    "{}{}",
+                                    "{}{}\r\n",
                                     OK,
                                     [
                                         "Content-Type: text/plain",
@@ -377,7 +377,7 @@ mod http {
                                 // .join("\r\n")
                                 // .as_str();
                             }
-                            _ => NOT_FOUND.to_string(),
+                            _ => format!("{}\r\n", NOT_FOUND),
                         }
                     } // _ => NOT_FOUND,
                 },
