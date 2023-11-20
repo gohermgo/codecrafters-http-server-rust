@@ -233,8 +233,8 @@ mod tcp {
 mod http {
     use std::{fmt::Display, path::PathBuf};
     #[allow(dead_code)]
-    const OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
-    const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
+    const OK: &str = "HTTP/1.1 200 OK\r\n";
+    const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n";
 
     enum Method {
         Get,
