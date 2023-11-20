@@ -353,17 +353,16 @@ mod http {
                                 // .as_str();
                                 let (_, message) = path_string.split_at("/echo".len());
                                 // let message = path_string[path_string.find('/')..path_string.len()]
-                                let constructed = format!(
-                                    "{}{}\r\n{}\r\n",
-                                    OK,
+                                let headers = format!(
+                                    "{}\r\n",
                                     [
                                         "Content-Type: text/plain",
                                         format!("Content-Length: {}", message.len()).as_str(),
                                     ]
                                     .join("\r\n")
-                                    .as_str(),
-                                    message
                                 );
+                                let constructed =
+                                    format!("{}{}\r\n{}\r\n", OK, headers.as_str(), message);
                                 println!("constructed {}", constructed);
                                 log_from_mod!("constructed as", constructed);
                                 constructed
