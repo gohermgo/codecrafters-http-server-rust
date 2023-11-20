@@ -328,7 +328,7 @@ mod http {
         pub fn handle(&self) -> String {
             match self.method {
                 Method::Get => match self.path.to_str().unwrap() {
-                    "/" => OK.to_string(),
+                    "/" => format!("{}\r\n", OK),
                     path_string => {
                         let path_segments = path_string.split('/').collect::<Vec<&str>>();
                         path_segments
