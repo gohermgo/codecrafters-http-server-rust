@@ -334,9 +334,11 @@ mod http {
                         path_segments
                             .iter()
                             .for_each(|seg| log_from_mod!("segment", seg));
+
                         let content_length =
-                            path_segments.get(1).map_or(0u8, |msg| msg.len() as u8);
-                        match path_segments[0] {
+                            path_segments.get(2).map_or(0u8, |msg| msg.len() as u8);
+                        // let root_segment = path_segments[1];
+                        match path_segments[1] {
                             "echo" => {
                                 // let response = vec![
                                 //     OK,
@@ -349,12 +351,15 @@ mod http {
                                 // ]
                                 // .join()
                                 // .as_str();
+                                let (_, message) = path_string.split_at("/echo".len());
+                                // let message = path_string[path_string.find('/')..path_string.len()]
                                 stringify!(
                                     "{}{}",
                                     OK,
                                     vec![
                                         "Content-Type: text/plain",
                                         stringify!("Content-Length: {}", content_length),
+                                        message
                                     ]
                                     .join("\r\n")
                                     .as_str(),
