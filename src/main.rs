@@ -230,6 +230,54 @@ mod tcp {
     // }
 }
 
+mod http {
+    use std::path::PathBuf;
+
+    enum Method {
+        Get,
+    }
+    pub struct Request {
+        method: Method,
+        path: PathBuf,
+        version: [u8; 2],
+    }
+    impl Request {
+        pub fn new(buffer: &[u8; super::GET_MAX_SIZE], bytes_read: usize) -> Self {
+            // let message = buffer[0..bytes_read]
+            let message = buffer.iter().map(|elem| *elem as char).collect::<String>();
+            log_from_mod!("parsing message", message);
+            let mut message_components = message.lines();
+            let start_line = message_components.nth(0).unwrap();
+            log_from_mod!("start line", start_line);
+
+            let mut start_line_iter = start_line.split_whitespace();
+
+            let method_string = start_line_iter.nth(0).unwrap();
+            log_from_mod!("method string", method_string);
+            let method = match method_string {
+                "GET" => Method::Get,
+                _ => {
+                    elog_from_mod!("weird method", method_string);
+                    unimplemented!()
+                }
+            };
+
+            // Successive calls to nth will remove this value
+            let path_string = start_line_iter.nth(0).unwrap();
+            log_from_mod!("path string", path_string);
+            let path = PathBuf::from(path_string);
+
+            let version_string = start_line_iter.nth(0).unwrap();
+            log_from_mod!("version string", version_string);
+
+            Self {
+                method,
+                path,
+                version: [1u8, 1u8],
+            }
+        }
+    }
+}
 const GET_MAX_SIZE: usize = 1024;
 const HTTP_OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
 
@@ -283,15 +331,19 @@ fn main() {
                         0usize
                     }
                 };
-                let stream_data = stream_buffer[0.._n_read]
-                    .iter()
-                    .map(|elem| *elem as char)
-                    .collect::<String>();
+                // let buffer = stream_buffer[0.._n_read];
+                let req = http::Request::new(&stream_buffer, _n_read);
+                // let req = http::Request::new(stream_buffer, _n_read);
+                // let stream_data = stream_buffer[0.._n_read]
+                //     .iter()
+                //     .map(|elem| *elem as char)
+                //     .collect::<String>();
                 // let x = stream_buffer.map(|elem| elem as char);
                 // for byte_data in stream_buffer {
                 // log_from_mod!("byte received", byte_data);
                 // }
-                log_from_mod!("received message", stream_data);
+                // log_from_mod!("received message", stream_data);
+                // log_from_mod!("attempt to parse now...");
             }
             Err(e) => elog_from_mod!("iffy error upon opening stream", e),
         })
