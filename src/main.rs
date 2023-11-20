@@ -335,8 +335,8 @@ mod http {
                             .iter()
                             .for_each(|seg| log_from_mod!("segment", seg));
 
-                        let content_length =
-                            path_segments.get(2).map_or(0u8, |msg| msg.len() as u8);
+                        // let content_length =
+                        //     path_segments.get(2).map_or(0u8, |msg| msg.len() as u8);
                         // let root_segment = path_segments[1];
                         match path_segments[1] {
                             "echo" => {
@@ -358,7 +358,7 @@ mod http {
                                     OK,
                                     [
                                         "Content-Type: text/plain",
-                                        format!("Content-Length: {}", content_length).as_str(),
+                                        format!("Content-Length: {}", message.len()).as_str(),
                                     ]
                                     .join("\r\n")
                                     .as_str(),
