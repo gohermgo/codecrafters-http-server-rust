@@ -252,14 +252,18 @@ mod http {
         value: String,
     }
     impl Header {
-        pub fn new(header_string: &str) -> Self {
-            let components = header_string
-                .split(':')
-                .map(|s| s.trim())
-                .collect::<Vec<&str>>();
-            Self {
-                key: components[0].to_string(),
-                value: components[1].to_string(),
+        pub fn new(header_string: &str) -> Option<Self> {
+            if header_string.is_empty() {
+                None
+            } else {
+                let components = header_string
+                    .split(':')
+                    .map(|s| s.trim())
+                    .collect::<Vec<&str>>();
+                Some(Self {
+                    key: components[0].to_string(),
+                    value: components[1].to_string(),
+                })
             }
         }
         pub fn log(&self) {
@@ -306,7 +310,7 @@ mod http {
             let version = start_line_iter.nth(0).unwrap().to_string();
             log_from_mod!("version string", version);
 
-            let headers: Vec<Header> = message_components.map(Header::new).collect();
+            let headers: Vec<Header> = message_components.filter_map(Header::new).collect();
             headers.iter().for_each(Header::log);
             // let headers = message_components.nth(0).unwrap();
             // log_from_mod!("headers", headers);
