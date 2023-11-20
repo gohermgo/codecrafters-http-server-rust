@@ -234,7 +234,7 @@ mod http {
     use std::{fmt::Display, path::PathBuf};
     #[allow(dead_code)]
     const OK: &str = "HTTP/1.1 200 OK\r\n";
-    const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n";
+    const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
 
     enum Method {
         Get,
@@ -377,7 +377,7 @@ mod http {
                                 // .join("\r\n")
                                 // .as_str();
                             }
-                            _ => format!("{}\r\n", NOT_FOUND),
+                            _ => NOT_FOUND.to_string(),
                         }
                     } // _ => NOT_FOUND,
                 },
