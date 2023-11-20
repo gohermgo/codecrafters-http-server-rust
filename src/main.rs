@@ -18,7 +18,7 @@ macro_rules! log_from_mod {
     //     println!("{}\t{}: {}", module_path!(), val[0], val);
     // };
     ($msg:literal, $val:expr) => {
-        println!("[{}] {}: {}", module_path!(), $msg, $val)
+        println!("[{}] {}: {:?}", module_path!(), $msg, $val)
     };
     ( $mgs:literal, $( $val:expr ),* ) => {
         print!("[{}] {}:", module_path!(), $msg);
