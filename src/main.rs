@@ -201,18 +201,18 @@ mod tcp {
         // println!("{} attempting to bind tcplistener", module_path!());
 
         // Log info regarding binding
-        log_from_mod!("attempting to bind tcplistener");
+        log_from_mod!("bind init");
         socket::log(&socketaddr);
 
         match socketaddr {
             SocketAddr::V4(socket_address) => match TcpListener::bind(socket_address) {
                 Ok(tcplistener) => {
-                    log_from_mod!("(V4) successful tcplistener bind");
+                    log_from_mod!("bind successful");
                     tcplistener
                 }
                 Err(e) => {
-                    elog_from_mod!("(V4) failed tcplistener bind, error {}", e);
-                    elog_from_mod!("(V4) returning fallback tcplistener");
+                    elog_from_mod!("bind failed", e);
+                    elog_from_mod!("returning fallback tcplistener");
                     TcpListener::bind(crate::socket::v4::addr::FALLBACK_V4).unwrap()
                 }
             },
@@ -329,7 +329,46 @@ mod http {
             match self.method {
                 Method::Get => match self.path.to_str().unwrap() {
                     "/" => OK,
-                    _ => NOT_FOUND,
+                    path_string => {
+                        let path_segments = path_string.split('/').collect::<Vec<&str>>();
+                        let content_length =
+                            path_segments.get(1).map_or(0u8, |msg| msg.len() as u8);
+                        match path_segments[0] {
+                            "echo" => {
+                                // let response = vec![
+                                //     OK,
+                                //     vec![
+                                //         "Content-Type: text/plain",
+                                //         stringify!("Content-Length: {}", content_length),
+                                //     ]
+                                //     .join("\r\n")
+                                //     .as_str(),
+                                // ]
+                                // .join()
+                                // .as_str();
+                                stringify!(
+                                    "{}{}",
+                                    OK,
+                                    vec![
+                                        "Content-Type: text/plain",
+                                        stringify!("Content-Length: {}", content_length),
+                                    ]
+                                    .join("\r\n")
+                                    .as_str(),
+                                )
+                                // .concat()
+                                // .as_str()
+                                // let start_line = OK;
+                                // let headers = vec![
+                                //     "Content-Type: text/plain",
+                                //     stringify!("Content-Length: {}", content_length),
+                                // ]
+                                // .join("\r\n")
+                                // .as_str();
+                            }
+                            _ => NOT_FOUND,
+                        }
+                    } // _ => NOT_FOUND,
                 },
             }
         }
