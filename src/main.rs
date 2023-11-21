@@ -230,12 +230,15 @@ mod tcp {
 }
 
 mod http {
-    use std::{fmt::Display, path::PathBuf};
+    use std::{
+        fmt::{Display, Write},
+        path::PathBuf,
+    };
     #[allow(dead_code)]
     const OK: &str = "HTTP/1.1 200 OK\r\n";
     const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
 
-    enum Method {
+    pub(super) enum Method {
         Get,
     }
     impl Method {
@@ -273,13 +276,13 @@ mod http {
         }
     }
     #[allow(dead_code)]
-    pub struct Request {
+    pub struct Payload {
         method: Method,
         path: PathBuf,
         version: String,
         headers: Vec<Header>,
     }
-    impl Request {
+    impl Payload {
         pub fn new(buffer: &[u8; super::GET_MAX_SIZE], bytes_read: usize) -> Self {
             let message = buffer[0..bytes_read]
                 .iter()
@@ -323,6 +326,21 @@ mod http {
                 version,
                 headers,
             }
+        }
+        pub(super) fn dummy(headers: Vec<Header>) -> Self {
+            Self {
+                method: Method::Get,
+                path: PathBuf::from("/"),
+                version: String::from("HTTP/1.1"),
+                headers,
+            }
+        }
+        pub(crate) fn construct_headers(&self) -> String {
+            let headers = self.headers.iter().fold(String::new(), |mut output, elem| {
+                let _ = write!(output, "{}: {}\r\n", elem.key, elem.value);
+                output
+            });
+            format!("{}\r\n", headers)
         }
         pub fn handle(&self) -> String {
             match self.method {
@@ -443,7 +461,7 @@ fn main() {
                     }
                 };
                 // let buffer = stream_buffer[0.._n_read];
-                let req = http::Request::new(&stream_buffer, _n_read);
+                let req = http::Payload::new(&stream_buffer, _n_read);
                 // log_from_mod!("dumping request");
                 // req.log();
                 let res = req.handle();
@@ -502,3 +520,26 @@ fn main() {
 //         }
 //     }
 // }
+#[cfg(test)]
+mod test {
+    mod http {
+        use crate::http::*;
+        #[test]
+        fn test_header_construction() {
+            let content_type = Header::new("Content-Type: text/plain").unwrap();
+            let content_length = Header::new("Content-Length: 3").unwrap();
+            let dummy_payload = Payload::dummy(vec![content_type, content_length]);
+            let headers_string = dummy_payload.construct_headers();
+            assert_eq!(
+                "Content-Type: text/plain\r\nContent-Length: 3\r\n\r\n",
+                headers_string.as_str()
+            )
+            // let dummy_payload = Payload {
+            //     method: Method::Get,
+            //     path: PathBuf::from("/"),
+            //     version: String::from("HTTP/1.1"),
+            //     headers: vec![content_type, content_length],
+            // };
+        }
+    }
+}
