@@ -264,11 +264,10 @@ mod http {
         impl Field {
             pub fn try_parse(header_line: &str) -> Option<Self> {
                 log_from_mod!("Trying to parse header field from", header_line);
-                if let Some(index) = header_line.find(':') {
-                    // Try to split header
+                if let Some((key_string, value_string)) = header_line.split_once(':') {
                     // Header-Key: Header-Value
-                    let (key_string, value_string) = header_line.split_at(index);
-                    let (_, value_string) = value_string.split_at(1usize);
+                    // let (key_string, value_string) = header_line.split_at(index);
+                    // let (_, value_string) = value_string.split_at(1usize);
                     // Trim both
                     let (key_string, value_string) = (key_string.trim(), value_string.trim());
                     // Construct field based on key
@@ -295,15 +294,23 @@ mod http {
                         }
                         "Host" => {
                             // Port may be omitted if port is standard for the requested service
-                            let (host_name, port) = if let Some(idx) = value_string.find(':') {
-                                let (host_name, port) = value_string.split_at(idx);
-                                (String::from(host_name), port.parse::<u16>().ok())
-                            } else {
-                                (String::from(value_string), None)
-                            };
-                            log_from_mod!("Parsed Host string: {}", host_name);
-                            log_from_mod!("Parsed Host port: {}", port);
-                            Some(Field::Host(host_name, port))
+                            let (host_string, port_number) =
+                                if let Some((host_name, port)) = value_string.split_once(':') {
+                                    log_from_mod!("host name", host_name);
+                                    log_from_mod!("port num", port);
+                                    (String::from(host_name), port.parse::<u16>().ok())
+                                } else {
+                                    (String::from(value_string), None)
+                                };
+                            // let (host_name, port) = if let Some(idx) = value_string.find(':') {
+                            //     let (host_name, port) = value_string.split_once(idx);
+                            //     (String::from(host_name), port.parse::<u16>().ok())
+                            // } else {
+                            //     (String::from(value_string), None)
+                            // };
+                            log_from_mod!("Parsed Host string: {}", host_string);
+                            log_from_mod!("Parsed Host port: {}", port_number);
+                            Some(Field::Host(host_string, port_number))
                         }
                         "User-Agent" => {
                             log_from_mod!("parsed header User-Agent: {}", value_string);
