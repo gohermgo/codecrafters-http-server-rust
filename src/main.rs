@@ -477,19 +477,31 @@ mod http {
                         let path_segments = path_string
                             .split('/')
                             .enumerate()
-                            .filter_map(|(idx, e)| idx.ne(&0usize).then_some(e))
-                            .collect::<Vec<&str>>();
+                            .filter_map(|(idx, e)| idx.ne(&0usize).then_some(e.to_string()))
+                            .collect::<Vec<String>>();
                         // path_segments.remove(0usize);
-                        path_segments
-                            .iter()
-                            .for_each(|seg| log_from_mod!("segment", seg));
+                        // path_segments
+                        //     .iter()
+                        //     .for_each(|seg| log_from_mod!("segment", seg));
 
                         // let content_length =
                         //     path_segments.get(2).map_or(0u8, |msg| msg.len() as u8);
                         // let root_segment = path_segments[1];
-                        match path_segments[1] {
-                            "echo" => {
-                                let (_, message) = path_string.split_at("/echo/".len());
+                        match path_segments.get(0usize) {
+                            Some(method) if method.eq(&String::from("echo")) => {
+                                // let (_, message) = path_string.split_at("/echo/".len());
+                                let message = path_segments
+                                    .get(1..path_segments.len())
+                                    .unwrap_or(&[])
+                                    .iter()
+                                    .cloned()
+                                    .reduce(|acc, e| format!("{}{}", acc, e))
+                                    .unwrap_or(String::new());
+                                log_from_mod!("message is ", message);
+                                // let message = path_segments[1..path_segments.len()]
+                                //     .iter()
+                                //     .reduce(|acc, e| format!("{}{}", acc, e).as_str())
+                                //     .unwrap_or("");
                                 let headers = header::construct(vec![
                                     header::Field::ContentType(String::from("text/plain")),
                                     header::Field::ContentLength(message.len()),
@@ -507,7 +519,7 @@ mod http {
                                 //     format!("{}{}\r\n{}", OK, headers.as_str(), message);
                                 // println!("constructed headers", headers);
                                 log_from_mod!("constructed as ", headers);
-                                headers
+                                format!("{}{}{}", OK, headers, message)
                                 // .concat()
                                 // .as_str()
                                 // let start_line = OK;
