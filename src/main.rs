@@ -249,6 +249,7 @@ mod http {
         }
     }
     pub mod header {
+        #[derive(Debug)]
         pub enum Field {
             ///
             ContentLength(usize),
@@ -330,7 +331,12 @@ mod http {
             if header_string.is_empty() {
                 None
             } else {
-                let _checking = header_string.lines().map(header::Field::try_parse);
+                let _checking = header_string
+                    .lines()
+                    .map(header::Field::try_parse)
+                    .for_each(|f| {
+                        log_from_mod!("Heres something cool probably {}", f);
+                    });
                 let components = header_string
                     .split(':')
                     .map(|s| s.trim())
