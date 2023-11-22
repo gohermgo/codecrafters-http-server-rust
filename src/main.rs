@@ -248,6 +248,72 @@ mod http {
             }
         }
     }
+    pub mod header {
+        pub enum Field {
+            ///
+            ContentLength(usize),
+            ContentType(String),
+            /// Port may be omitted, if port is standard for the requested service
+            Host(String, Option<u16>),
+            /// The user agent string of the user agent
+            /// Identifies who is responsible for making a given HTTP request
+            UserAgent(String),
+        }
+        impl Field {
+            pub fn try_parse(header_line: &str) -> Option<Self> {
+                log_from_mod!("Trying to parse header field from {}", header_line);
+                if let Some(index) = header_line.find(':') {
+                    // Try to split header
+                    // Header-Key: Header-Value
+                    let (key_string, value_string) = header_line.split_at(index);
+                    // Trim both
+                    let (key_string, value_string) = (key_string.trim(), value_string.trim());
+                    // Construct field based on key
+                    match key_string {
+                        "Content-Length" => {
+                            if let Ok(octet_count) = value_string.parse::<usize>() {
+                                log_from_mod!("parsed header Content-Length: {}", octet_count);
+                                Some(Self::ContentLength(octet_count))
+                            } else {
+                                elog_from_mod!(
+                                    "failed to parse header Content-Length: {}",
+                                    value_string
+                                );
+                                None
+                            }
+                        }
+                        "Content-Type" => {
+                            log_from_mod!("parsed header Content-Type: {}", value_string);
+                            Some(Self::ContentType(String::from(value_string)))
+                        }
+                        "Host" => {
+                            // Port may be omitted if port is standard for the requested service
+                            let (host_name, port) = if let Some(idx) = value_string.find(':') {
+                                let (host_name, port) = value_string.split_at(idx);
+                                (String::from(host_name), port.parse::<u16>().ok())
+                            } else {
+                                (String::from(value_string), None)
+                            };
+                            log_from_mod!("Parsed Host string: {}", host_name);
+                            log_from_mod!("Parsed Host port: {}", port);
+                            Some(Field::Host(host_name, port))
+                        }
+                        "User-Agent" => {
+                            log_from_mod!("parsed header User-Agent: {}", value_string);
+                            Some(Field::UserAgent(String::from(value_string)))
+                        }
+                        _ => {
+                            elog_from_mod!("Unrecognized header key {}", key_string);
+                            None
+                        }
+                    }
+                } else {
+                    elog_from_mod!("Failed to parse header line {}", header_line);
+                    None
+                }
+            }
+        }
+    }
     #[allow(dead_code)]
     #[derive(Debug)]
     pub struct Header {
@@ -264,6 +330,7 @@ mod http {
             if header_string.is_empty() {
                 None
             } else {
+                let _checking = header_string.lines().map(header::Field::try_parse);
                 let components = header_string
                     .split(':')
                     .map(|s| s.trim())
