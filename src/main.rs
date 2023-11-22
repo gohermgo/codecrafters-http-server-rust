@@ -370,12 +370,13 @@ mod http {
             write!(f, "{}: {}", self.key, self.value)
         }
     }
+    #[allow(dead_code)]
     impl Header {
         pub fn new(header_string: &str) -> Option<Self> {
             if header_string.is_empty() {
                 None
             } else {
-                let _checking = header_string
+                header_string
                     .lines()
                     .map(header::Field::try_parse)
                     .for_each(|f| {
@@ -447,6 +448,7 @@ mod http {
                 headers,
             }
         }
+        #[allow(dead_code)]
         pub(super) fn dummy(headers: Vec<header::Field>) -> Self {
             Self {
                 method: Method::Get,
