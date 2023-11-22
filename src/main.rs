@@ -285,11 +285,12 @@ mod http {
             }
         }
         pub fn construct(headers: Vec<Field>) -> String {
-            headers
+            let header_string = headers
                 .iter()
                 .map(Field::to_string)
                 .reduce(|acc, e| format!("{}{}", acc, e))
-                .unwrap_or(String::new())
+                .unwrap_or(String::new());
+            format!("{}\r\n", header_string)
         }
         impl Field {
             pub fn try_parse(header_line: &str) -> Option<Self> {
