@@ -585,7 +585,7 @@ fn main() {
                 // log_from_mod!("dumping request");
                 // req.log();
                 let res = req.handle();
-                log_from_mod!("attempting response");
+                log_from_mod!("attempting response ", res);
                 let _n_written = match stream.write(res.as_bytes()) {
                     Ok(bytes_written) => {
                         log_from_mod!("bytes written", bytes_written);
