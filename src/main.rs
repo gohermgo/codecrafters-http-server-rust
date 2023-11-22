@@ -493,10 +493,10 @@ mod http {
                                 let message = path_segments
                                     .get(1..path_segments.len())
                                     .unwrap_or(&[])
-                                    .iter()
-                                    .cloned()
-                                    .reduce(|acc, e| format!("{}{}", acc, e))
-                                    .unwrap_or(String::new());
+                                    .to_vec()
+                                    .join("/");
+                                // .reduce(|acc, e| format!("{}{}", acc, e))
+                                // .unwrap_or(String::new());
                                 log_from_mod!("message is ", message);
                                 // let message = path_segments[1..path_segments.len()]
                                 //     .iter()
