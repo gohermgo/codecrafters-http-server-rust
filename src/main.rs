@@ -474,7 +474,12 @@ mod http {
                 Method::Get => match self.path.to_str().unwrap() {
                     "/" => format!("{}\r\n", OK),
                     path_string => {
-                        let path_segments = path_string.split('/').collect::<Vec<&str>>();
+                        let path_segments = path_string
+                            .split('/')
+                            .enumerate()
+                            .filter_map(|(idx, e)| idx.ne(&0usize).then_some(e))
+                            .collect::<Vec<&str>>();
+                        // path_segments.remove(0usize);
                         path_segments
                             .iter()
                             .for_each(|seg| log_from_mod!("segment", seg));
