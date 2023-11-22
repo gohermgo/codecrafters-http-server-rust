@@ -268,7 +268,7 @@ mod http {
                     // Try to split header
                     // Header-Key: Header-Value
                     let (key_string, value_string) = header_line.split_at(index);
-                    let (_, value_string) = value_string.split_at(0usize);
+                    let (_, value_string) = value_string.split_at(1usize);
                     // Trim both
                     let (key_string, value_string) = (key_string.trim(), value_string.trim());
                     // Construct field based on key
