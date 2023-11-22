@@ -251,6 +251,7 @@ mod http {
     pub mod header {
         #[derive(Debug)]
         pub enum Field {
+            AcceptEncoding(String),
             ///
             ContentLength(usize),
             ContentType(String),
@@ -262,29 +263,34 @@ mod http {
         }
         impl Field {
             pub fn try_parse(header_line: &str) -> Option<Self> {
-                log_from_mod!("Trying to parse header field from {}", header_line);
+                log_from_mod!("Trying to parse header field from", header_line);
                 if let Some(index) = header_line.find(':') {
                     // Try to split header
                     // Header-Key: Header-Value
                     let (key_string, value_string) = header_line.split_at(index);
+                    let (_, value_string) = value_string.split_at(0usize);
                     // Trim both
                     let (key_string, value_string) = (key_string.trim(), value_string.trim());
                     // Construct field based on key
                     match key_string {
+                        "Accept-Encoding" => {
+                            log_from_mod!("parsed header Accept-Encoding: ", value_string);
+                            Some(Self::AcceptEncoding(String::from(value_string)))
+                        }
                         "Content-Length" => {
                             if let Ok(octet_count) = value_string.parse::<usize>() {
-                                log_from_mod!("parsed header Content-Length: {}", octet_count);
+                                log_from_mod!("parsed header Content-Length: ", octet_count);
                                 Some(Self::ContentLength(octet_count))
                             } else {
                                 elog_from_mod!(
-                                    "failed to parse header Content-Length: {}",
+                                    "failed to parse header Content-Length: ",
                                     value_string
                                 );
                                 None
                             }
                         }
                         "Content-Type" => {
-                            log_from_mod!("parsed header Content-Type: {}", value_string);
+                            log_from_mod!("parsed header Content-Type: ", value_string);
                             Some(Self::ContentType(String::from(value_string)))
                         }
                         "Host" => {
