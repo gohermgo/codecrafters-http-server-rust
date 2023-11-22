@@ -230,6 +230,7 @@ mod tcp {
 }
 
 mod http {
+    #[allow(unused_imports)]
     use std::{
         fmt::{Display, Write},
         path::PathBuf,
@@ -263,7 +264,7 @@ mod http {
         }
         impl ToString for Field {
             fn to_string(&self) -> String {
-                let mut header_string = match self {
+                let header_string = match self {
                     Self::AcceptEncoding(encoding_type) => {
                         format!("Accept-Encoding: {}", encoding_type)
                     }
@@ -282,6 +283,13 @@ mod http {
                 };
                 format!("{}\r\n", header_string)
             }
+        }
+        pub fn construct(headers: Vec<Field>) -> String {
+            headers
+                .iter()
+                .map(Field::to_string)
+                .reduce(|acc, e| format!("{}{}", acc, e))
+                .unwrap_or(String::new())
         }
         impl Field {
             pub fn try_parse(header_line: &str) -> Option<Self> {
@@ -456,7 +464,7 @@ mod http {
                 .headers
                 .iter()
                 .map(header::Field::to_string)
-                .reduce(|mut output, elem| format!("{}{}", output, elem))
+                .reduce(|acc, elem| format!("{}{}", acc, elem))
                 .unwrap_or(String::new());
             // let header_field = self.headers.iter().fold(String::new())
             format!("{}\r\n", headers)
@@ -476,32 +484,25 @@ mod http {
                         // let root_segment = path_segments[1];
                         match path_segments[1] {
                             "echo" => {
-                                // let response = vec![
-                                //     OK,
-                                //     vec![
+                                let (_, message) = path_string.split_at("/echo/".len());
+                                let headers = header::construct(vec![
+                                    header::Field::ContentType(String::from("text/plain")),
+                                    header::Field::ContentLength(message.len()),
+                                ]);
+
+                                // let headers = format!(
+                                //     "{}\r\n",
+                                //     [
                                 //         "Content-Type: text/plain",
-                                //         stringify!("Content-Length: {}", content_length),
+                                //         format!("Content-Length: {}", message.len()).as_str(),
                                 //     ]
                                 //     .join("\r\n")
-                                //     .as_str(),
-                                // ]
-                                // .join()
-                                // .as_str();
-                                let (_, message) = path_string.split_at("/echo/".len());
-                                // let message = path_string[path_string.find('/')..path_string.len()]
-                                let headers = format!(
-                                    "{}\r\n",
-                                    [
-                                        "Content-Type: text/plain",
-                                        format!("Content-Length: {}", message.len()).as_str(),
-                                    ]
-                                    .join("\r\n")
-                                );
-                                let constructed =
-                                    format!("{}{}\r\n{}", OK, headers.as_str(), message);
-                                println!("constructed {}", constructed);
-                                log_from_mod!("constructed as", constructed);
-                                constructed
+                                // );
+                                // let constructed =
+                                //     format!("{}{}\r\n{}", OK, headers.as_str(), message);
+                                // println!("constructed headers", headers);
+                                log_from_mod!("constructed as ", headers);
+                                headers
                                 // .concat()
                                 // .as_str()
                                 // let start_line = OK;
