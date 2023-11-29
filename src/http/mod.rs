@@ -18,7 +18,7 @@ const NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
 const MAX_BUFFER_SIZE: usize = 1024;
 
 /// Struct to handle HTTP version
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Version(u8, Option<u8>);
 impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -131,37 +131,46 @@ impl Response {
                 let mut status = response::Status::NotFound;
                 let mut headers: Vec<header::Kind> = vec![];
                 let mut body = None;
-                let request_components = request_struct
-                    .start_line
-                    .target
-                    .path
-                    .split('/')
-                    .filter(|s| !s.is_empty())
-                    .collect::<Vec<&str>>();
-                match request_components.first() {
-                    Some(root) if root.eq(&String::from("echo")) => {
-                        let content = request_components
-                            .get(1..request_struct.start_line.target.path.len())
-                            .unwrap()
-                            .to_vec()
-                            .join("/");
-                        let content_length = content.len();
-                        headers.push(ContentType(Plaintext));
-                        headers.push(ContentLength(content_length));
-                        body = Some(content);
-                        status = response::Status::Ok;
+                log_from_mod!("request startline", request_struct.start_line);
+                let request_path = request_struct.start_line.target.path.clone();
+                if request_path.len().eq(&0usize) && request_path.eq("/") {
+                    status = response::Status::Ok;
+                    let start_line = response::Startline { version, status };
+                    Self {
+                        start_line,
+                        headers,
+                        body,
                     }
-                    _ => (),
-                }
-                // match request_struct.start_line.target.path[0] {
-                //     String::from("echo") => {}
-                //     _ => (),
-                // };
-                let start_line = response::Startline { version, status };
-                Self {
-                    start_line,
-                    headers,
-                    body,
+                } else {
+                    let request_components = request_path
+                        .split('/')
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<&str>>();
+                    match request_components.first() {
+                        Some(root) if root.eq(&String::from("echo")) => {
+                            let content = request_components
+                                .get(1..request_struct.start_line.target.path.len())
+                                .unwrap()
+                                .to_vec()
+                                .join("/");
+                            let content_length = content.len();
+                            headers.push(ContentType(Plaintext));
+                            headers.push(ContentLength(content_length));
+                            body = Some(content);
+                            status = response::Status::Ok;
+                        }
+                        _ => (),
+                    }
+                    // match request_struct.start_line.target.path[0] {
+                    //     String::from("echo") => {}
+                    //     _ => (),
+                    // };
+                    let start_line = response::Startline { version, status };
+                    Self {
+                        start_line,
+                        headers,
+                        body,
+                    }
                 }
             }
             Post => todo!(),

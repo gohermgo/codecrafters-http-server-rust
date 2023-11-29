@@ -2,6 +2,7 @@ use std::{
     fmt::{self, Display, Formatter},
     str::FromStr,
 };
+#[derive(Copy, Clone)]
 pub enum Method {
     Get,
     Post,
@@ -65,6 +66,7 @@ pub mod target {
         Asterisk,
     }
 }
+#[derive(Clone)]
 pub struct Target {
     pub path: String,
     pub form: target::Form,
@@ -77,6 +79,7 @@ pub struct Target {
 ///     - The authority component of a URL, consisting of the domain name and optionally the port (prefixed by a :) is called the authority form. It is only used with `Method::Connect` when setting up an HTTP tunnel.
 ///     - The asterisk form, a simple asterisk is used with `Method::Options`, representing the server as a whole.
 ///   3. The HTTP version, which defines the structure of the remaining message, acting as an indicator of the expected version to use for the response
+#[derive(Clone)]
 pub struct Startline {
     pub method: Method,
     pub target: Target,
