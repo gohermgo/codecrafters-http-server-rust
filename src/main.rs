@@ -4,6 +4,22 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStrea
 #[allow(unused_imports)]
 use std::sync::Arc;
 #[macro_export]
+macro_rules! log_from_mod_debug {
+    ($msg:literal, $val:expr) => {
+        println!("[{}] {}: {:?}", module_path!(), $msg, $val)
+    };
+    ( $mgs:literal, $( $val:expr ),* ) => {
+        print!("[{}] {}:", module_path!(), $msg);
+        let x = $val;
+        log_from_mod($msg, $val);
+    };
+    ($msg:expr, $val:expr) => {
+        println!("[{}] {}: {}", module_path!(), $msg, $val)
+    };
+    ($msg:literal) => {
+        println!("[{}] {}", module_path!(), $msg)
+    };
+}
 macro_rules! log_from_mod {
     // ( $msg:literal, $( $val:expr ),* ) => {
     //     let mut val_string = String::new();
@@ -17,7 +33,7 @@ macro_rules! log_from_mod {
     //     println!("{}\t{}: {}", module_path!(), val[0], val);
     // };
     ($msg:literal, $val:expr) => {
-        println!("[{}] {}: {:?}", module_path!(), $msg, $val)
+        println!("[{}] {}: {}", module_path!(), $msg, $val)
     };
     ( $mgs:literal, $( $val:expr ),* ) => {
         print!("[{}] {}:", module_path!(), $msg);
@@ -251,10 +267,9 @@ fn main() {
                 let req = http::Request::try_construct(&stream_buffer, bytes_read).unwrap();
                 // log_from_mod!("dumping request");
                 // req.log();
-                let res = "";
-                log_from_mod!("attempting response ", res);
-                unreachable!();
-                let _n_written = match stream.write(res.as_bytes()) {
+                let res = http::Response::try_construct(req);
+                log_from_mod!("attempting response {}", res);
+                let _n_written = match stream.write(res.to_string().as_bytes()) {
                     Ok(bytes_written) => {
                         log_from_mod!("bytes written", bytes_written);
                         bytes_written
