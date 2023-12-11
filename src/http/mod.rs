@@ -161,12 +161,12 @@ impl TryFrom<Request> for Response {
                                 .headers
                                 .iter()
                                 .filter_map(|x| match x {
-                                    Header::UserAgent(user_agent) => Some(user_agent),
+                                    Header::UserAgent(user_agent) => Some(user_agent.to_string()),
                                     _ => None,
                                 })
                                 .nth(0usize)
                                 .unwrap();
-                            body = Some(content.to_string())
+                            body = Some(content)
                         }
                         _ => (),
                     }
