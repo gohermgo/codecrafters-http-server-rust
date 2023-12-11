@@ -166,7 +166,10 @@ impl TryFrom<Request> for Response {
                                 })
                                 .nth(0usize)
                                 .unwrap();
-                            body = Some(content)
+                            headers.push(ContentType(Plaintext));
+                            headers.push(ContentLength(content.len()));
+                            body = Some(content);
+                            status = response::Status::Ok;
                         }
                         _ => (),
                     }
