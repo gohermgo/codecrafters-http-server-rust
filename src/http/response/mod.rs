@@ -21,13 +21,14 @@ impl std::fmt::Display for Startline {
         std::fmt::write(f, format_args!("{} {}\r\n", self.version, self.status))
     }
 }
-impl Startline {
-    #[allow(dead_code)]
-    pub fn try_constuct(request_startline: crate::http::request::Startline) -> Option<Self> {
-        match request_startline.method {
+impl TryFrom<super::request::Startline> for Startline {
+    type Error = String;
+
+    fn try_from(value: super::request::Startline) -> Result<Self, Self::Error> {
+        match value.method {
             super::request::Method::Get => {
-                let version = request_startline.version;
-                let status = match request_startline.target.path.split_once('/') {
+                let version = value.version;
+                let status = match value.target.path.split_once('/') {
                     Some((_should_be_empty, path)) => match path.split_once('/') {
                         Some(("echo", _payload)) => Status::Ok,
                         Some((root, path)) => {
@@ -40,7 +41,7 @@ impl Startline {
                     None => Status::Ok,
                 };
                 let response_startline = Self { version, status };
-                Some(response_startline)
+                Ok(response_startline)
             }
             super::request::Method::Post => unimplemented!(),
             _ => unimplemented!(),

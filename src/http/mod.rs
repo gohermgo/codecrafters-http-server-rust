@@ -120,17 +120,18 @@ impl TryFrom<Request> for Response {
     fn try_from(value: Request) -> Result<Self, Self::Error> {
         use header::{content_type::Kind::*, Kind::*};
         use request::Method::*;
+        let start_line = response::Startline::try_from(value.start_line.clone()).unwrap();
         match value.start_line.method {
             Get => {
-                let version = value.start_line.version;
-                let mut status = response::Status::NotFound;
+                // let version = value.start_line.version;
+                // let mut status = response::Status::NotFound;
                 let mut headers: Vec<header::Kind> = vec![];
                 let mut body = None;
                 log_from_mod!("request startline", value.start_line);
                 let request_path = value.start_line.target.path.clone();
                 if request_path.eq("/") {
-                    status = response::Status::Ok;
-                    let start_line = response::Startline { version, status };
+                    // status = response::Status::Ok;
+                    // let start_line = response::Startline { version, status };
                     Ok(Self {
                         start_line,
                         headers,
@@ -153,11 +154,11 @@ impl TryFrom<Request> for Response {
                             headers.push(ContentType(Plaintext));
                             headers.push(ContentLength(content_length));
                             body = Some(content);
-                            status = response::Status::Ok;
+                            // status = response::Status::Ok;
                         }
                         _ => (),
                     }
-                    let start_line = response::Startline { version, status };
+                    // let start_line = response::Startline { version, status };
                     Ok(Self {
                         start_line,
                         headers,
