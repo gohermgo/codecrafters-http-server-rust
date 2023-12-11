@@ -28,18 +28,33 @@ impl TryFrom<super::request::Startline> for Startline {
         match value.method {
             super::request::Method::Get => {
                 let version = value.version;
-                let status = match value.target.path.split_once('/') {
-                    Some((_should_be_empty, path)) => match path.split_once('/') {
-                        Some(("echo", _payload)) => Status::Ok,
-                        Some((root, path)) => {
-                            log_from_mod!("root : {}", root);
-                            log_from_mod!("path : {}", path);
-                            Status::NotFound
+                let status = match value.target.path {
+                    // Match index
+                    s if s.eq("/") => Status::Ok,
+                    s => {
+                        let request_components = s
+                            .split('/')
+                            .filter(|s| !s.is_empty())
+                            .collect::<Vec<&str>>();
+                        match request_components.first() {
+                            Some(root) if root.eq(&String::from("echo")) => Status::Ok,
+                            Some(_otherpath) => Status::NotFound,
+                            None => Status::NotFound,
                         }
-                        _ => Status::NotFound,
-                    },
-                    None => Status::Ok,
+                    }
                 };
+                // let status = match value.target.path.split_once('/') {
+                //     Some((_should_be_empty, path)) => match path.split_once('/') {
+                //         Some(("echo", _payload)) => Status::Ok,
+                //         Some((root, path)) => {
+                //             log_from_mod!("root : {}", root);
+                //             log_from_mod!("path : {}", path);
+                //             Status::NotFound
+                //         }
+                //         _ => Status::NotFound,
+                //     },
+                //     None => Status::Ok,
+                // };
                 let response_startline = Self { version, status };
                 Ok(response_startline)
             }
