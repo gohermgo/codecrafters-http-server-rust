@@ -128,7 +128,7 @@ impl Response {
                 let mut body = None;
                 log_from_mod!("request startline", request_struct.start_line);
                 let request_path = request_struct.start_line.target.path.clone();
-                if request_path.len().eq(&0usize) && request_path.eq("/") {
+                if request_path.eq("/") {
                     status = response::Status::Ok;
                     let start_line = response::Startline { version, status };
                     Self {
