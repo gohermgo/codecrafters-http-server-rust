@@ -10,6 +10,8 @@ use {
 pub enum Kind {
     /// Curl user agent
     Curl(String),
+    /// Go User Agent
+    GoHttpClient(String),
     /// Any unrecognized/unimplemented user agent
     Unrecognized,
 }
@@ -18,6 +20,7 @@ impl Display for Kind {
         use Kind::*;
         let user_agent_string = match self {
             Curl(version) => format!("curl/{}", version),
+            GoHttpClient(version) => format!("Go-http-client/{}", version),
             Unrecognized => String::from("unrecognized"),
         };
         fmt::write(f, format_args!("{}", user_agent_string))
@@ -32,6 +35,7 @@ impl FromStr for Kind {
         use Kind::*;
         match s.split_once('/') {
             Some(("curl", version)) => Ok(Curl(version.to_string())),
+            Some(("Go-http-client", version)) => Ok(GoHttpClient(version.to_string())),
             Some((agent, version)) => {
                 let unrecognized_agent = format!("{}/{}", agent, version);
                 Err(Error::Unrecognized(unrecognized_agent))
