@@ -143,7 +143,12 @@ impl TryFrom<Request> for Response {
                         .collect::<Vec<&str>>();
                     match request_components.first() {
                         Some(root) if root.eq(&String::from("echo")) => {
-                            let content = request_components.join("/");
+                            let content = request_components
+                                .into_iter()
+                                .enumerate()
+                                .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                                .collect::<Vec<&str>>()
+                                .join("/");
                             let content_length = content.len();
                             headers.push(ContentType(Plaintext));
                             headers.push(ContentLength(content_length));
