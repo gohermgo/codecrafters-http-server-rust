@@ -39,10 +39,7 @@ impl FromStr for Kind {
         match s.split_once('/') {
             Some(("curl", version)) => Ok(Curl(version.to_string())),
             Some(("Go-http-client", version)) => Ok(GoHttpClient(version.to_string())),
-            Some((agent, version)) => {
-                let unrecognized_agent = format!("{}/{}", agent, version);
-                Err(Error::Unrecognized(unrecognized_agent))
-            }
+            Some((_agent, _version)) => Ok(Any(s.to_string())),
             None => Ok(Any(s.to_string())),
         }
     }
