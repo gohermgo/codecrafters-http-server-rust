@@ -266,7 +266,7 @@ fn main() {
                 let req = http::Request::try_construct(&stream_buffer, bytes_read).unwrap();
                 // log_from_mod!("dumping request");
                 // req.log();
-                let res = http::Response::try_construct(req);
+                let res = http::Response::try_from(req).unwrap();
                 log_from_mod!("attempting response", res);
                 let _n_written = match stream.write(res.to_string().as_bytes()) {
                     Ok(bytes_written) => {

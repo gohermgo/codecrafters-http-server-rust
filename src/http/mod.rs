@@ -115,27 +115,27 @@ pub struct Response {
     headers: Vec<header::Kind>,
     body: Option<String>,
 }
-impl Response {
-    #[allow(dead_code)]
-    pub fn try_construct(request_struct: Request) -> Self {
+impl TryFrom<Request> for Response {
+    type Error = String;
+    fn try_from(value: Request) -> Result<Self, Self::Error> {
         use header::{content_type::Kind::*, Kind::*};
         use request::Method::*;
-        match request_struct.start_line.method {
+        match value.start_line.method {
             Get => {
-                let version = request_struct.start_line.version;
+                let version = value.start_line.version;
                 let mut status = response::Status::NotFound;
                 let mut headers: Vec<header::Kind> = vec![];
                 let mut body = None;
-                log_from_mod!("request startline", request_struct.start_line);
-                let request_path = request_struct.start_line.target.path.clone();
+                log_from_mod!("request startline", value.start_line);
+                let request_path = value.start_line.target.path.clone();
                 if request_path.eq("/") {
                     status = response::Status::Ok;
                     let start_line = response::Startline { version, status };
-                    Self {
+                    Ok(Self {
                         start_line,
                         headers,
                         body,
-                    }
+                    })
                 } else {
                     let request_components = request_path
                         .split('/')
@@ -143,11 +143,7 @@ impl Response {
                         .collect::<Vec<&str>>();
                     match request_components.first() {
                         Some(root) if root.eq(&String::from("echo")) => {
-                            let content = request_components
-                                .get(1..request_struct.start_line.target.path.len())
-                                .unwrap()
-                                .to_vec()
-                                .join("/");
+                            let content = request_components.join("/");
                             let content_length = content.len();
                             headers.push(ContentType(Plaintext));
                             headers.push(ContentLength(content_length));
@@ -156,16 +152,12 @@ impl Response {
                         }
                         _ => (),
                     }
-                    // match request_struct.start_line.target.path[0] {
-                    //     String::from("echo") => {}
-                    //     _ => (),
-                    // };
                     let start_line = response::Startline { version, status };
-                    Self {
+                    Ok(Self {
                         start_line,
                         headers,
                         body,
-                    }
+                    })
                 }
             }
             Post => todo!(),

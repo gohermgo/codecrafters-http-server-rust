@@ -28,8 +28,8 @@ impl Startline {
             super::request::Method::Get => {
                 let version = request_startline.version;
                 let status = match request_startline.target.path.split_once('/') {
-                    Some((should_be_empty, path)) => match path.split_once('/') {
-                        Some(("echo", payload)) => Status::Ok,
+                    Some((_should_be_empty, path)) => match path.split_once('/') {
+                        Some(("echo", _payload)) => Status::Ok,
                         Some((root, path)) => {
                             log_from_mod!("root : {}", root);
                             log_from_mod!("path : {}", path);

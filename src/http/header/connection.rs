@@ -11,6 +11,7 @@ pub enum Kind {
     /// Connection keep alive
     KeepAlive,
     /// Any unrecognized or unimplemented connection kind
+    #[allow(dead_code)]
     Unrecognized,
 }
 impl Display for Kind {
