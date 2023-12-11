@@ -56,7 +56,6 @@ macro_rules! elog_from_mod {
         eprintln!("[{}] {}", module_path!(), $msg)
     };
 }
-mod error;
 mod http;
 /// Module to store information regarding IPs
 #[macro_use]

@@ -1,10 +1,11 @@
+mod error;
 pub(crate) mod header;
 pub(crate) mod request;
 pub(crate) mod response;
 
 #[allow(unused_imports)]
 use {
-    crate::error::{IError, ParseHttpVersionError},
+    error::Error,
     std::{
         fmt::{self, Display, Formatter, Write},
         path::PathBuf,
@@ -30,7 +31,7 @@ impl Display for Version {
     }
 }
 impl FromStr for Version {
-    type Err = ParseHttpVersionError;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split_once('/') {
             Some(("HTTP", version)) => {
@@ -43,14 +44,8 @@ impl FromStr for Version {
                 };
                 Ok(Self(major, minor))
             }
-            Some((first, secnd)) => Err(ParseHttpVersionError::new(format!(
-                "failed to parse {}/{} as an http version",
-                first, secnd
-            ))),
-            _ => Err(ParseHttpVersionError::new(format!(
-                "{} does not match expected http version format",
-                s
-            ))),
+            Some((first, secnd)) => Err(Error::ParseVersion(first.to_string(), secnd.to_string())),
+            _ => Err(Error::ParseVersionFormat(s.to_string())),
         }
     }
 }

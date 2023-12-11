@@ -1,119 +1,25 @@
+/// Module to handle errors related to headers
+mod error;
+
 /// Module to handle User-Agent headers
-pub mod user_agent {
-    use {
-        crate::error::{IError, ParseUserAgentError},
-        std::{
-            fmt::{self, Display, Formatter},
-            str::FromStr,
-        },
-    };
-    #[derive(Clone)]
-    pub enum Kind {
-        Curl(String),
-    }
-    impl Display for Kind {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            use Kind::*;
-            let user_agent_string = match self {
-                Curl(version) => format!("curl/{}", version),
-            };
-            fmt::write(f, format_args!("{}", user_agent_string))
-        }
-    }
-    impl FromStr for Kind {
-        type Err = ParseUserAgentError;
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            use Kind::*;
-            match s.split_once('/').unwrap_or(("", "")) {
-                ("curl", version) => Ok(Curl(version.to_string())),
-                (agent, version) => Err(ParseUserAgentError::new(format!(
-                    "unrecognized agent {}/{}",
-                    agent, version
-                ))),
-            }
-        }
-    }
-}
+pub(crate) mod user_agent;
+
 /// Module to handle Connection headers
-pub mod connection {
-    use {
-        crate::error::{IError, ParseConnectionError},
-        std::{
-            fmt::{self, Display, Formatter},
-            str::FromStr,
-        },
-    };
-    #[derive(Copy, Clone)]
-    pub enum Kind {
-        KeepAlive,
-    }
-    impl Display for Kind {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            use Kind::*;
-            let connection_string = match self {
-                KeepAlive => String::from("keep-alive"),
-            };
-            fmt::write(f, format_args!("{}", connection_string))
-        }
-    }
-    impl FromStr for Kind {
-        type Err = ParseConnectionError;
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            use Kind::*;
-            match s {
-                "keep-alive" => Ok(KeepAlive),
-                other => Err(ParseConnectionError::new(format!(
-                    "Unknown connection header value {}",
-                    other
-                ))),
-            }
-        }
-    }
-}
+pub(crate) mod connection;
+
 /// Module to handle Content-Type headers
-pub mod content_type {
-    use {
-        crate::error::{IError, ParseContentTypeError},
-        std::{
-            fmt::{self, Display, Formatter},
-            str::FromStr,
-        },
-    };
-    /// Content types
-    #[derive(Copy, Clone)]
-    pub enum Kind {
-        /// Plain text content
-        Plaintext,
-    }
-    impl Display for Kind {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            use Kind::*;
-            let content_type_string = match self {
-                Plaintext => String::from("text/plain"),
-            };
-            fmt::write(f, format_args!("{}", content_type_string))
-        }
-    }
-    impl FromStr for Kind {
-        type Err = ParseContentTypeError;
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s {
-                "text/plain" => Ok(Self::Plaintext),
-                other => Err(ParseContentTypeError::new(other)),
-            }
-        }
-    }
-}
+pub(crate) mod content_type;
+
 use {
-    crate::error::{IError, ParseHeaderError},
+    error::Error,
     std::{
         fmt::{self, Display, Formatter},
         str::FromStr,
     },
 };
 /// Headers
-#[derive(Clone)]
-pub enum Kind {
+#[derive(Debug, Clone)]
+pub(crate) enum Kind {
     /// Request Header
     Host(String, Option<u16>),
     /// Request Header
@@ -163,7 +69,7 @@ impl Display for Kind {
     }
 }
 impl FromStr for Kind {
-    type Err = ParseHeaderError;
+    type Err = Error;
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         use Kind::*;
         let (key, value) = value.split_once(':').unwrap_or(("", ""));
@@ -172,16 +78,20 @@ impl FromStr for Kind {
             ("Host", host_address) => match host_address.split_once(':') {
                 Some((address, port_string)) => match port_string.parse::<u16>() {
                     Ok(port) => Ok(Host(address.to_string(), Some(port))),
-                    Err(e) => Err(ParseHeaderError::new(
-                        format!("{} error on trying to parse port {}", e, port_string).as_str(),
-                    )),
+                    Err(e) => {
+                        let kind = Host(host_address.to_string(), None);
+                        let message =
+                            format!("{} error on trying to parse port {}", e, port_string);
+                        let error = Error::Parse(kind, message);
+                        Err(error)
+                    }
                 },
                 None => Ok(Host(host_address.to_string(), None)),
             },
             ("User-Agent", user_agent_string) => {
                 match user_agent::Kind::from_str(user_agent_string) {
                     Ok(user_agent_kind) => Ok(UserAgent(user_agent_kind)),
-                    Err(e) => Err(ParseHeaderError::new(e)),
+                    Err(e) => Err(e),
                 }
             }
             ("Accept", accepted) => Ok(Accept(accepted.to_string())),
@@ -195,47 +105,41 @@ impl FromStr for Kind {
             ("Connection", connection_string) => {
                 match connection::Kind::from_str(connection_string) {
                     Ok(connection_kind) => Ok(Connection(connection_kind)),
-                    Err(e) => Err(ParseHeaderError::new(
-                        format!(
-                            "{} on trying to parse connection kind {}",
-                            e, connection_string
-                        )
-                        .as_str(),
-                    )),
+                    Err(e) => Err(e),
                 }
             }
             ("Upgrade-Insecure-Requests", count_string) => match count_string.parse::<u32>() {
                 Ok(count) => Ok(UpgradeInsecureRequests(count)),
-                Err(e) => Err(ParseHeaderError::new(
-                    format!("{} error on trying to parse UIR count: {}", e, count_string).as_str(),
-                )),
+                Err(e) => {
+                    let kind = UpgradeInsecureRequests(0u32);
+                    let message =
+                        format!("{} error on trying to parse UIR count: {}", e, count_string);
+                    let error = Error::Parse(kind, message);
+                    Err(error)
+                }
             },
             // Representation Headers
             ("Content-Type", content_type_string) => {
                 match content_type::Kind::from_str(content_type_string) {
                     Ok(content_kind) => Ok(ContentType(content_kind)),
-                    Err(e) => Err(ParseHeaderError::new(
-                        format!(
-                            "{} error on trying to parse header {}",
-                            e, content_type_string
-                        )
-                        .as_str(),
-                    )),
+                    Err(e) => Err(e),
                 }
             }
             ("Content-Length", content_length_string) => {
                 match content_length_string.parse::<usize>() {
                     Ok(content_length) => Ok(ContentLength(content_length)),
-                    Err(e) => Err(ParseHeaderError::new(
-                        format!(
+                    Err(e) => {
+                        let kind = ContentLength(0usize);
+                        let message = format!(
                             "{} error on trying to parse content length {}",
                             e, content_length_string
-                        )
-                        .as_str(),
-                    )),
+                        );
+                        let error = Error::Parse(kind, message);
+                        Err(error)
+                    }
                 }
             }
-            _ => Err(ParseHeaderError::new(format!(
+            _ => Err(Error::Unrecognized(format!(
                 "unknown header {}: {}",
                 key, value
             ))),
