@@ -7,8 +7,8 @@ pub enum Status {
 impl std::fmt::Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Status::Ok => std::fmt::write(f, format_args!("{} OK\r\n", *self as u8)),
-            Status::NotFound => std::fmt::write(f, format_args!("{} NotFound\r\n", *self as usize)),
+            Status::Ok => std::fmt::write(f, format_args!("{} OK", *self as u8)),
+            Status::NotFound => std::fmt::write(f, format_args!("{} NotFound", *self as usize)),
         }
     }
 }
