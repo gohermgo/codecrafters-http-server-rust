@@ -19,7 +19,7 @@ use {
 };
 /// Headers
 #[derive(Debug, Clone)]
-pub(crate) enum Kind {
+pub enum Kind {
     /// Request Header
     Host(String, Option<u16>),
     /// Request Header
