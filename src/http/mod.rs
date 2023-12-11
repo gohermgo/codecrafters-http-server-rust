@@ -156,6 +156,18 @@ impl TryFrom<Request> for Response {
                             body = Some(content);
                             status = response::Status::Ok;
                         }
+                        Some(root) if root.eq(&String::from("user-agent")) => {
+                            let content = value
+                                .headers
+                                .iter()
+                                .filter_map(|x| match x {
+                                    Header::UserAgent(user_agent) => Some(user_agent),
+                                    _ => None,
+                                })
+                                .nth(0usize)
+                                .unwrap();
+                            body = Some(content.to_string())
+                        }
                         _ => (),
                     }
                     let start_line = response::Startline { version, status };
