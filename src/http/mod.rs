@@ -50,7 +50,7 @@ impl FromStr for Version {
     }
 }
 /// Typedef for Headers
-pub(crate) type Header = crate::http::header::Kind;
+pub type Header = crate::http::header::Kind;
 
 /// HTTP requests are messages sent by the client to initiate an action on the server
 #[allow(dead_code)]
