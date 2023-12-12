@@ -189,6 +189,7 @@ impl TryFrom<Request> for Response {
                             }
                             if md.is_file() {
                                 log_from_mod!("is file");
+                                println!("{:#?}", md.file_type());
                             }
                             if md.is_symlink() {
                                 log_from_mod!("is symlink");
