@@ -76,12 +76,13 @@ impl Request {
             request::Startline::from_str(request_lines.get(0usize).unwrap_or(&"")).ok();
         let headers = request_lines
             .iter()
-            .filter_map(
-                |request_line| match str::parse::<header::Kind>(request_line) {
+            .filter_map(|request_line| {
+                log_from_mod!("{}", request_line);
+                match str::parse::<header::Kind>(request_line) {
                     Ok(h) => Some(h),
                     Err(_e) => None,
-                },
-            )
+                }
+            })
             .collect::<Vec<header::Kind>>();
         let header_count = headers.len();
         let body = request_lines
