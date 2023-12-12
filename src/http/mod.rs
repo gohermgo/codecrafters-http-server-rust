@@ -317,10 +317,12 @@ impl TryFrom<Request> for Response {
             (Get, _) => {
                 log_from_mod!("get unknown");
                 status = response::Status::NotFound;
+                let start_line = response::Startline { version, status };
+                log_from_mod!("responding with {}", start_line.to_string());
                 Ok(Self {
                     start_line: response::Startline { version, status },
                     headers: value.headers,
-                    body,
+                    body: None,
                 })
             }
             (Post, Some(&"files")) => match std::env::args().nth(2usize) {

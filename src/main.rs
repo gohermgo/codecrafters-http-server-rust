@@ -1,3 +1,4 @@
+use std::io::{self, Write};
 use std::net;
 #[allow(unused_imports)]
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream, ToSocketAddrs};
@@ -33,18 +34,26 @@ macro_rules! log_from_mod {
     //     println!("{}\t{}: {}", module_path!(), val[0], val);
     // };
     ($msg:literal, $val:expr) => {
-        println!("[{}] {}: {}", module_path!(), $msg, $val)
+        let stdout = std::io::stdout();
+        let mut handle = stdout.lock();
+
+        let s = format!("[{} {}] {}: {}", line!(), module_path!(), $msg, $val);
+        let _ = std::io::Write::write_all(&mut handle, s.as_bytes());
     };
     ( $mgs:literal, $( $val:expr ),* ) => {
-        print!("[{}] {}:", module_path!(), $msg);
+        print!("[{} {}] {}:", line!(), module_path!(), $msg);
         let x = $val;
         log_from_mod($msg, $val);
     };
     ($msg:expr, $val:expr) => {
-        println!("[{}] {}: {}", module_path!(), $msg, $val)
+        let stdout = std::io::stdout();
+        let mut handle = stdout.lock();
+
+        let s = format!("[{} {}] {}: {}", line!(), module_path!(), $msg, $val)
+        let _ = std::io::Write::write_all(&mut handle, s.as_bytes());
     };
     ($msg:literal) => {
-        println!("[{}] {}", module_path!(), $msg)
+        println!("[{} {}] {}", line!(), module_path!(), $msg)
     };
 }
 #[macro_export]
@@ -86,6 +95,7 @@ pub mod ip {
             /// Submodule for utilities
             #[macro_use]
             pub mod utils {
+
                 use super::*;
 
                 /// Logs the address
@@ -180,7 +190,7 @@ mod tcp;
 const GET_MAX_SIZE: usize = 1024;
 
 #[allow(unused_imports)]
-use std::io::{Read, Write};
+use std::io::Read;
 
 fn handle_stream(tcp_stream: std::io::Result<TcpStream>) -> std::io::Result<()> {
     match tcp_stream {
