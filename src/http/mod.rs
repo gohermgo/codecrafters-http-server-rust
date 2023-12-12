@@ -194,6 +194,7 @@ impl TryFrom<Request> for Response {
                                 log_from_mod!("not sure")
                             }
                             let buf = std::fs::read(path.clone())?;
+                            let buf = buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
                             for bytes in buf {
                                 log_from_mod!("{}", bytes);
                             }
