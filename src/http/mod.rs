@@ -186,12 +186,12 @@ impl TryFrom<Request> for Response {
                             let md = std::fs::metadata(path.clone())?;
                             if md.is_dir() {
                                 log_from_mod!("is dir");
-                            } else if md.is_file() {
+                            }
+                            if md.is_file() {
                                 log_from_mod!("is file");
-                            } else if md.is_symlink() {
+                            }
+                            if md.is_symlink() {
                                 log_from_mod!("is symlink");
-                            } else {
-                                log_from_mod!("not sure")
                             }
                             let buf = std::fs::read(path.clone())?;
                             let buf = buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
