@@ -171,6 +171,28 @@ impl TryFrom<Request> for Response {
                             body = Some(content);
                             status = response::Status::Ok;
                         }
+                        Some(root) if root.eq(&String::from("files")) => {
+                            let directory = std::env::args().nth(0usize).unwrap_or("/".to_string());
+                            let content = request_components
+                                .into_iter()
+                                .enumerate()
+                                .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                                .collect::<Vec<&str>>()
+                                .join("/");
+                            let path = std::path::PathBuf::from(vec![directory, content].join("/"));
+                            match std::fs::read(path) {
+                                Ok(file_content) => {
+                                    headers.push(ContentType(Plaintext));
+                                    headers.push(ContentLength(file_content.len()));
+                                    body =
+                                        Some(String::from_utf8(file_content).unwrap_or_default());
+                                    status = response::Status::Ok;
+                                }
+                                Err(_e) => {
+                                    status = response::Status::NotFound;
+                                }
+                            };
+                        }
                         _ => (),
                     }
                     let start_line = response::Startline { version, status };
