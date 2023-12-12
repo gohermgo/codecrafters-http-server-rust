@@ -315,7 +315,7 @@ impl TryFrom<Request> for Response {
                 }
             },
             (Get, _) => {
-                log_from_mod!("get unknown");
+                log_from_mod!("get unknown ({})", request_path_root.unwrap_or(&""));
                 status = response::Status::NotFound;
                 let start_line = response::Startline { version, status };
                 log_from_mod!("responding with {}", start_line.to_string());
