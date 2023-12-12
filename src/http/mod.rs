@@ -183,6 +183,16 @@ impl TryFrom<Request> for Response {
                                 .collect::<Vec<&str>>()
                                 .join("/");
                             let path = std::path::PathBuf::from(directory);
+                            let md = std::fs::metadata(path.clone())?;
+                            if md.is_dir() {
+                                log_from_mod!("is dir");
+                            } else if md.is_file() {
+                                log_from_mod!("is file");
+                            } else if md.is_symlink() {
+                                log_from_mod!("is symlink");
+                            } else {
+                                log_from_mod!("not sure")
+                            }
                             let search = std::fs::read_dir(path.clone())?;
                             for hit in search {
                                 match hit {
