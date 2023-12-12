@@ -180,13 +180,11 @@ impl TryFrom<Request> for Response {
                                 .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                                 .collect::<Vec<&str>>()
                                 .join("/");
-                            let path = std::path::PathBuf::from(vec![directory, content].join("/"));
-                            let abs_path = std::fs::canonicalize(path).unwrap_or_default();
-                            log_from_mod!(
-                                "looking for file {:#?}",
-                                abs_path.clone().to_str().unwrap_or_default()
-                            );
-                            match std::fs::read(abs_path) {
+                            let path_string = vec![directory, content].join("/");
+
+                            log_from_mod!("looking for file {:#?}", path_string.clone());
+                            let path = std::path::PathBuf::from(path_string);
+                            match std::fs::read(path) {
                                 Ok(file_content) => {
                                     headers.push(ContentType(Plaintext));
                                     headers.push(ContentLength(file_content.len()));
