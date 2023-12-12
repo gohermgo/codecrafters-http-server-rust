@@ -145,7 +145,7 @@ impl TryFrom<Request> for Response {
                         .filter(|s| !s.is_empty())
                         .collect::<Vec<&str>>();
                     match request_components.first() {
-                        Some(root) if root.eq(&String::from("echo")) => {
+                        Some(&"echo") => {
                             let content = request_components
                                 .into_iter()
                                 .enumerate()
@@ -158,7 +158,7 @@ impl TryFrom<Request> for Response {
                             body = Some(content);
                             status = response::Status::Ok;
                         }
-                        Some(root) if root.eq(&String::from("user-agent")) => {
+                        Some(&"user-agent") => {
                             let content = value
                                 .headers
                                 .iter()
@@ -173,79 +173,83 @@ impl TryFrom<Request> for Response {
                             body = Some(content);
                             status = response::Status::Ok;
                         }
-                        Some(root) if root.eq(&String::from("files")) => {
-                            let directory = std::env::args().nth(1usize).unwrap_or("/".to_string());
-                            log_from_mod!("got directory {}", directory);
-                            let content = request_components
-                                .into_iter()
-                                .enumerate()
-                                .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                                .collect::<Vec<&str>>()
-                                .join("/");
-                            let file_string = vec![directory, content].join("/");
-                            log_from_mod!("{}", file_string.clone());
-                            let path = std::path::PathBuf::from(file_string);
-                            if path.exists() {
-                                log_from_mod!("path exists");
-                                if path.is_absolute() {
-                                    log_from_mod!("absolute path");
+                        Some(&"files") => match std::env::args().nth(2usize) {
+                            Some(directory) => {
+                                log_from_mod!("got directory {}", directory);
+                                let content = request_components
+                                    .into_iter()
+                                    .enumerate()
+                                    .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                                    .collect::<Vec<&str>>()
+                                    .join("/");
+                                let file_string = vec![directory, content].join("/");
+                                log_from_mod!("{}", file_string.clone());
+                                let path = std::path::PathBuf::from(file_string);
+                                if path.exists() {
+                                    log_from_mod!("path exists");
+                                    if path.is_absolute() {
+                                        log_from_mod!("absolute path");
+                                    } else {
+                                        log_from_mod!("relative path");
+                                    }
+                                    let md = std::fs::metadata(path.clone())?;
+                                    if md.is_dir() {
+                                        log_from_mod!("is dir");
+                                    }
+                                    if md.is_file() {
+                                        log_from_mod!("is file");
+                                        println!("{:#?}", md.file_type());
+                                    }
+                                    if md.is_symlink() {
+                                        log_from_mod!("is symlink");
+                                    }
+                                    let buf = std::fs::read(path.clone())?;
+                                    let buf =
+                                        buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
+                                    let buf_str = String::from_utf8(buf).unwrap_or_default();
+                                    log_from_mod!("{}", buf_str);
+                                    headers.push(ContentType(
+                                        header::content_type::Kind::Appbytestream,
+                                    ));
+                                    headers.push(ContentLength(buf_str.len()));
+                                    body = Some(buf_str);
+                                    status = response::Status::Ok;
                                 } else {
-                                    log_from_mod!("relative path");
+                                    log_from_mod!("path not found");
+                                    status = response::Status::NotFound;
                                 }
-                                let md = std::fs::metadata(path.clone())?;
-                                if md.is_dir() {
-                                    log_from_mod!("is dir");
-                                }
-                                if md.is_file() {
-                                    log_from_mod!("is file");
-                                    println!("{:#?}", md.file_type());
-                                }
-                                if md.is_symlink() {
-                                    log_from_mod!("is symlink");
-                                }
-                                let buf = std::fs::read(path.clone())?;
-                                let buf =
-                                    buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
-                                let buf_str = String::from_utf8(buf).unwrap_or_default();
-                                log_from_mod!("{}", buf_str);
-                                headers
-                                    .push(ContentType(header::content_type::Kind::Appbytestream));
-                                headers.push(ContentLength(buf_str.len()));
-                                body = Some(buf_str);
-                                status = response::Status::Ok;
-                            } else {
-                                log_from_mod!("path not found");
-                                status = response::Status::NotFound;
                             }
-                            // match std::fs::read_dir(path) {
-                            //     Ok(mut directory_content) => {
-                            //         match directory_content.find(|x| match x {
-                            //             Ok(dir_entry) => dir_entry
-                            //                 .file_name()
-                            //                 .eq(&OsString::from(content.clone())),
-                            //             _ => false,
-                            //         }) {
-                            //             Some(file) => {
-                            //                 let file_content = std::fs::read(file.unwrap().path())
-                            //                     .unwrap_or_default();
-                            //                 headers.push(ContentType(Plaintext));
-                            //                 headers.push(ContentLength(file_content.len()));
-                            //                 body = Some(
-                            //                     String::from_utf8(file_content).unwrap_or_default(),
-                            //                 );
-                            //                 status = response::Status::Ok;
-                            //             }
-                            //             None => {
-                            //                 status = response::Status::NotFound;
-                            //             }
-                            //         }
-                            //     }
-                            //     Err(_e) => {
-                            //         elog_from_mod!("{}", _e);
-                            //         status = response::Status::NotFound;
-                            //     }
-                            // };
-                        }
+                            None => {
+                                status = response::Status::NotFound;
+                            } // match std::fs::read_dir(path) {
+                              //     Ok(mut directory_content) => {
+                              //         match directory_content.find(|x| match x {
+                              //             Ok(dir_entry) => dir_entry
+                              //                 .file_name()
+                              //                 .eq(&OsString::from(content.clone())),
+                              //             _ => false,
+                              //         }) {
+                              //             Some(file) => {
+                              //                 let file_content = std::fs::read(file.unwrap().path())
+                              //                     .unwrap_or_default();
+                              //                 headers.push(ContentType(Plaintext));
+                              //                 headers.push(ContentLength(file_content.len()));
+                              //                 body = Some(
+                              //                     String::from_utf8(file_content).unwrap_or_default(),
+                              //                 );
+                              //                 status = response::Status::Ok;
+                              //             }
+                              //             None => {
+                              //                 status = response::Status::NotFound;
+                              //             }
+                              //         }
+                              //     }
+                              //     Err(_e) => {
+                              //         elog_from_mod!("{}", _e);
+                              //         status = response::Status::NotFound;
+                              //     }
+                              // };
+                        },
                         _ => (),
                     }
                     let start_line = response::Startline { version, status };
