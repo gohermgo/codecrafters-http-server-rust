@@ -303,7 +303,14 @@ impl TryFrom<Request> for Response {
                     panic!();
                 }
             },
-            (Get, _) => todo!(),
+            (Get, _) => {
+                status = response::Status::NotFound;
+                Ok(Self {
+                    start_line: response::Startline { version, status },
+                    headers,
+                    body,
+                })
+            }
             (Post, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
                     let content = request_path_components
