@@ -1,15 +1,19 @@
+use std::fmt;
 #[derive(Clone, Copy, Debug)]
 #[allow(dead_code)]
 pub enum Status {
     Ok = 200,
+    Created = 201,
     NotFound = 404,
 }
-impl std::fmt::Display for Status {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Status::Ok => std::fmt::write(f, format_args!("{} OK", *self as u8)),
-            Status::NotFound => std::fmt::write(f, format_args!("{} NotFound", *self as usize)),
-        }
+impl fmt::Display for Status {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Status::Ok => format!("{} OK", *self as u8),
+            Status::Created => format!("{} Created", *self as u8),
+            Status::NotFound => format!("{} NotFound", *self as u8),
+        };
+        fmt::write(f, format_args!("{}", s))
     }
 }
 pub struct Startline {

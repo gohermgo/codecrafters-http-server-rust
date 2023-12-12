@@ -97,6 +97,48 @@ impl Display for Startline {
         )
     }
 }
+impl FromStr for Startline {
+    type Err = std::io::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut components = s.split_whitespace();
+        if components.clone().count() != 3 {
+            let error = std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "component count longer not equal to 3",
+            );
+            Err(error)
+        } else {
+            let method = match components.nth(0usize).unwrap() {
+                "GET" => Method::Get,
+                "POST" => Method::Post,
+                _ => unimplemented!(),
+            };
+            let target_component = components.nth(0usize).unwrap();
+            let target = if target_component.contains('*') {
+                Target {
+                    path: "*".to_string(),
+                    form: target::Form::Asterisk,
+                }
+            } else {
+                Target {
+                    path: target_component.to_string(),
+                    form: target::Form::Absolute,
+                }
+            };
+            let version = match components.nth(0usize).unwrap() {
+                "HTTP/1.1" => super::Version(1u8, Some(1u8)),
+                "HTTP/2" => super::Version(2u8, None),
+                _ => unimplemented!(),
+            };
+            let line = Self {
+                method,
+                target,
+                version,
+            };
+            Ok(line)
+        }
+    }
+}
 impl Startline {
     pub(super) fn try_parse(start_line: &str) -> Option<Self> {
         let mut components = start_line.split_whitespace();

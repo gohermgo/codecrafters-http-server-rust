@@ -1,5 +1,3 @@
-use std::ffi::OsString;
-
 mod error;
 pub(crate) mod header;
 pub(crate) mod request;
@@ -59,6 +57,7 @@ pub type Header = crate::http::header::Kind;
 pub struct Request {
     start_line: request::Startline,
     headers: Vec<Header>,
+    body: Vec<u8>,
 }
 impl Request {
     pub fn try_construct(
@@ -69,13 +68,14 @@ impl Request {
             .iter()
             .map(|x| *x as char)
             .collect::<String>();
-        let mut request_lines = request_str.lines().filter(|s| !s.is_empty());
-        let start_line = if let Some(start_line) = request_lines.nth(0) {
-            request::Startline::try_parse(start_line)
-        } else {
-            None
-        };
+        let request_lines = request_str
+            .lines()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<&str>>();
+        let start_line =
+            request::Startline::from_str(request_lines.get(0usize).unwrap_or(&"")).ok();
         let headers = request_lines
+            .iter()
             .filter_map(
                 |request_line| match str::parse::<header::Kind>(request_line) {
                     Ok(h) => Some(h),
@@ -86,10 +86,24 @@ impl Request {
                 },
             )
             .collect::<Vec<header::Kind>>();
+        let header_count = headers.len();
+        let body = request_lines
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| {
+                if i.ge(&header_count) {
+                    Some(e.as_bytes().to_vec())
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect::<Vec<u8>>();
         if let Some(start_line) = start_line {
             let request = Request {
                 start_line,
                 headers,
+                body,
             };
             Some(request)
         } else {
@@ -113,6 +127,77 @@ impl Display for Response {
         }
     }
 }
+
+// #[derive(Clone)]
+// pub struct FilterMapI<I, F, A, B>
+// where
+//     I: Sized + Iterator<Item = (usize, A)>,
+//     F: FnMut(I) -> Option<B>,
+// {
+//     iter: I,
+//     f: F,
+// }
+// impl<I, F, A, B> FilterMapI<I, F, A, B> {
+//     pub fn new(iter: I, f: F) -> FilterMapI<I, F, A, B>
+//     where
+//         I: Sized + Iterator<Item = (usize, A)>,
+//         F: FnMut(I) -> Option<B>,
+//     {
+//         let iter = iter.enumerate();
+//         return {};
+//     }
+// }
+
+// impl<I: fmt::Debug, F, B: fmt::Debug> fmt::Debug for FilterMapI<I, F, B> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         f.debug_struct("FilterMap")
+//             .field("iter", &self.iter)
+//             .finish()
+//     }
+// }
+
+pub trait IteratorExtensions {
+    fn for_each_i<F>(self, f: F)
+    where
+        Self: Iterator + Sized,
+        F: FnMut((usize, Self::Item)),
+    {
+        self.enumerate().for_each(f)
+    }
+    fn map_i<B, F>(self, f: F) -> std::iter::Map<std::iter::Enumerate<Self>, F>
+    where
+        Self: Iterator + Sized,
+        F: FnMut((usize, Self::Item)) -> Option<B>,
+    {
+        self.enumerate().map(f)
+    }
+    fn filter_i<P>(self, predicate: P) -> std::iter::Filter<std::iter::Enumerate<Self>, P>
+    where
+        Self: Iterator + Sized,
+        P: FnMut(&(usize, Self::Item)) -> bool,
+    {
+        self.enumerate().filter(predicate)
+    }
+    fn filter_map_i<B, F>(self, f: F) -> std::iter::FilterMap<std::iter::Enumerate<Self>, F>
+    where
+        Self: Iterator + Sized,
+        F: FnMut((usize, Self::Item)) -> Option<B>,
+    {
+        self.enumerate().filter_map(f)
+    }
+}
+impl<I: Iterator + Sized> IteratorExtensions for I {}
+// impl<T, I: Iterator<Item = T>> IteratorExtensions for I
+// where
+//     I: Iterator + Sized,
+// {
+//     fn filter_map_i<B, F>(self, f: F) -> std::iter::FilterMap<std::iter::Enumerate<Self>, F>
+//     where
+//         F: FnMut((usize, Self::Item)) -> Option<B>,
+//     {
+//         self.enumerate().filter_map(f)
+//     }
+// }
 pub struct Response {
     start_line: response::Startline,
     headers: Vec<header::Kind>,
@@ -123,135 +208,90 @@ impl TryFrom<Request> for Response {
     fn try_from(value: Request) -> Result<Self, Self::Error> {
         use header::{content_type::Kind::*, Kind::*};
         use request::Method::*;
-        match value.start_line.method {
-            Get => {
-                let version = value.start_line.version;
-                let mut status = response::Status::NotFound;
-                let mut headers: Vec<header::Kind> = vec![];
-                let mut body = None;
-                log_from_mod!("request startline", value.start_line);
-                let request_path = value.start_line.target.path.clone();
-                if request_path.eq("/") {
-                    status = response::Status::Ok;
-                    let start_line = response::Startline { version, status };
-                    Ok(Self {
-                        start_line,
-                        headers,
-                        body,
+        log_from_mod!("request startline", value.start_line);
+
+        let version = value.start_line.version;
+        let mut status = response::Status::NotFound;
+        let mut headers: Vec<header::Kind> = vec![];
+        let mut body = None;
+        let request_path = value.start_line.target.path.clone();
+        let request_path_components = request_path.split('/').into_iter().collect::<Vec<&str>>();
+        let request_path_root = request_path_components.get(0usize);
+
+        match (value.start_line.method, request_path_root) {
+            (Get, _) if request_path.eq("/") => {
+                status = response::Status::Ok;
+                let start_line = response::Startline { version, status };
+                Ok(Self {
+                    start_line,
+                    headers,
+                    body,
+                })
+            }
+            (Get, Some(&"echo")) => {
+                let content = request_path_components
+                    .into_iter()
+                    .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                    // .enumerate()
+                    // .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                    .collect::<Vec<&str>>()
+                    .join("/");
+                let content_length = content.len();
+                headers.push(ContentType(Plaintext));
+                headers.push(ContentLength(content_length));
+                body = Some(content);
+                status = response::Status::Ok;
+                let start_line = response::Startline { version, status };
+                Ok(Self {
+                    start_line,
+                    headers,
+                    body,
+                })
+            }
+            (Get, Some(&"user-agent")) => {
+                let content = value
+                    .headers
+                    .iter()
+                    .filter_map(|x| match x {
+                        Header::UserAgent(user_agent) => Some(user_agent.to_string()),
+                        _ => None,
                     })
-                } else {
-                    let request_components = request_path
-                        .split('/')
-                        .filter(|s| !s.is_empty())
-                        .collect::<Vec<&str>>();
-                    match request_components.first() {
-                        Some(&"echo") => {
-                            let content = request_components
-                                .into_iter()
-                                .enumerate()
-                                .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                                .collect::<Vec<&str>>()
-                                .join("/");
-                            let content_length = content.len();
-                            headers.push(ContentType(Plaintext));
-                            headers.push(ContentLength(content_length));
-                            body = Some(content);
-                            status = response::Status::Ok;
-                        }
-                        Some(&"user-agent") => {
-                            let content = value
-                                .headers
-                                .iter()
-                                .filter_map(|x| match x {
-                                    Header::UserAgent(user_agent) => Some(user_agent.to_string()),
-                                    _ => None,
-                                })
-                                .nth(0usize)
-                                .unwrap();
-                            headers.push(ContentType(Plaintext));
-                            headers.push(ContentLength(content.len()));
-                            body = Some(content);
-                            status = response::Status::Ok;
-                        }
-                        Some(&"files") => match std::env::args().nth(2usize) {
-                            Some(directory) => {
-                                log_from_mod!("got directory {}", directory);
-                                let content = request_components
-                                    .into_iter()
-                                    .enumerate()
-                                    .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                                    .collect::<Vec<&str>>()
-                                    .join("/");
-                                let file_string = vec![directory, content].join("/");
-                                log_from_mod!("{}", file_string.clone());
-                                let path = std::path::PathBuf::from(file_string);
-                                if path.exists() {
-                                    log_from_mod!("path exists");
-                                    if path.is_absolute() {
-                                        log_from_mod!("absolute path");
-                                    } else {
-                                        log_from_mod!("relative path");
-                                    }
-                                    let md = std::fs::metadata(path.clone())?;
-                                    if md.is_dir() {
-                                        log_from_mod!("is dir");
-                                    }
-                                    if md.is_file() {
-                                        log_from_mod!("is file");
-                                        println!("{:#?}", md.file_type());
-                                    }
-                                    if md.is_symlink() {
-                                        log_from_mod!("is symlink");
-                                    }
-                                    let buf = std::fs::read(path.clone())?;
-                                    let buf =
-                                        buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
-                                    let buf_str = String::from_utf8(buf).unwrap_or_default();
-                                    log_from_mod!("{}", buf_str);
-                                    headers.push(ContentType(
-                                        header::content_type::Kind::Appbytestream,
-                                    ));
-                                    headers.push(ContentLength(buf_str.len()));
-                                    body = Some(buf_str);
-                                    status = response::Status::Ok;
-                                } else {
-                                    log_from_mod!("path not found");
-                                    status = response::Status::NotFound;
-                                }
-                            }
-                            None => {
-                                status = response::Status::NotFound;
-                            } // match std::fs::read_dir(path) {
-                              //     Ok(mut directory_content) => {
-                              //         match directory_content.find(|x| match x {
-                              //             Ok(dir_entry) => dir_entry
-                              //                 .file_name()
-                              //                 .eq(&OsString::from(content.clone())),
-                              //             _ => false,
-                              //         }) {
-                              //             Some(file) => {
-                              //                 let file_content = std::fs::read(file.unwrap().path())
-                              //                     .unwrap_or_default();
-                              //                 headers.push(ContentType(Plaintext));
-                              //                 headers.push(ContentLength(file_content.len()));
-                              //                 body = Some(
-                              //                     String::from_utf8(file_content).unwrap_or_default(),
-                              //                 );
-                              //                 status = response::Status::Ok;
-                              //             }
-                              //             None => {
-                              //                 status = response::Status::NotFound;
-                              //             }
-                              //         }
-                              //     }
-                              //     Err(_e) => {
-                              //         elog_from_mod!("{}", _e);
-                              //         status = response::Status::NotFound;
-                              //     }
-                              // };
-                        },
-                        _ => (),
-                    }
+                    .nth(0usize)
+                    .unwrap();
+                headers.push(ContentType(Plaintext));
+                headers.push(ContentLength(content.len()));
+                body = Some(content);
+                status = response::Status::Ok;
+                let start_line = response::Startline { version, status };
+                Ok(Self {
+                    start_line,
+                    headers,
+                    body,
+                })
+            }
+            (Get, Some(&"files")) => match std::env::args().nth(2usize) {
+                Some(directory) => {
+                    let content = request_path_components
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                        .collect::<Vec<&str>>()
+                        .join("/");
+                    let file_string = vec![directory, content].join("/");
+                    log_from_mod!("{}", file_string.clone());
+                    let path = std::path::PathBuf::from(file_string);
+                    if path.exists() {
+                        let buf = std::fs::read(path.clone())?;
+                        let buf_str = String::from_utf8(buf).unwrap_or_default();
+                        log_from_mod!("{}", buf_str);
+                        headers.push(ContentType(header::content_type::Kind::Appbytestream));
+                        headers.push(ContentLength(buf_str.len()));
+                        body = Some(buf_str);
+                        status = response::Status::Ok;
+                    } else {
+                        log_from_mod!("path not found");
+                        status = response::Status::NotFound;
+                    };
                     let start_line = response::Startline { version, status };
                     Ok(Self {
                         start_line,
@@ -259,11 +299,38 @@ impl TryFrom<Request> for Response {
                         body,
                     })
                 }
-            }
-            Post => todo!(),
-            Put => todo!(),
-            Options => todo!(),
-            Head => todo!(),
+                None => {
+                    panic!();
+                }
+            },
+            (Get, _) => todo!(),
+            (Post, Some(&"files")) => match std::env::args().nth(2usize) {
+                Some(directory) => {
+                    let content = request_path_components
+                        .into_iter()
+                        .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                        .collect::<Vec<&str>>()
+                        .join("/");
+                    let file_string = vec![directory, content].join("/");
+                    let path = std::path::PathBuf::from(file_string);
+                    headers.push(ContentType(header::content_type::Kind::Plaintext));
+                    headers.push(ContentLength(value.body.len()));
+                    std::fs::write(path, value.body)?;
+                    let start_line = response::Startline { version, status };
+                    Ok(Self {
+                        start_line,
+                        headers,
+                        body,
+                    })
+                }
+                None => {
+                    panic!()
+                }
+            },
+            (Post, _) => todo!(),
+            (Put, _) => todo!(),
+            (Options, _) => todo!(),
+            (Head, _) => todo!(),
         }
     }
 }
