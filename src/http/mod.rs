@@ -119,7 +119,7 @@ pub struct Response {
     body: Option<String>,
 }
 impl TryFrom<Request> for Response {
-    type Error = String;
+    type Error = std::io::Error;
     fn try_from(value: Request) -> Result<Self, Self::Error> {
         use header::{content_type::Kind::*, Kind::*};
         use request::Method::*;
@@ -182,10 +182,17 @@ impl TryFrom<Request> for Response {
                                 .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                                 .collect::<Vec<&str>>()
                                 .join("/");
-                            // let path_string = vec![directory, content].join("/");
-
-                            // log_from_mod!("looking for file {:#?}", path_string.clone());
                             let path = std::path::PathBuf::from(directory);
+                            let search = std::fs::read_dir(path.clone())?;
+                            for hit in search {
+                                match hit {
+                                    Ok(somethign) => log_from_mod!(
+                                        "{}",
+                                        somethign.file_name().to_str().unwrap_or_default()
+                                    ),
+                                    Err(e) => elog_from_mod!("{}", e),
+                                }
+                            }
                             match std::fs::read_dir(path) {
                                 Ok(mut directory_content) => {
                                     match directory_content.find(|x| match x {

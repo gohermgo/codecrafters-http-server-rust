@@ -93,27 +93,7 @@ pub mod ip {
                     log_from_mod!("address", addr);
                     // println!("[{}] address: {}", module_path!(), addr);
                 }
-                // pub fn _log(addr: &Ipv4Addr) {
-                //     log_from_mod!("address", addr)
-                // }
-                // #[macro_export]
-                // macro_rules! log {
-                //     ($val:expr) => {
-                //         (log_from_mod!("address", $val))
-                //     }
-                // }
-                // pub use log;
             }
-            // #[cfg(test)]
-            // mod tests {
-            //     use super::*;
-            //     #[test]
-            //     fn test_local_v4() {
-            //         // TODO: handle port etc
-            //         let ip = LOCAL_V4.octets();
-            //         assert_eq!(ip, [127u8, 0u8, 0u8, 1u8]);
-            //     }
-            // }
         }
         /// Submodule to store information regarding to ports
         pub mod port {
@@ -125,13 +105,6 @@ pub mod ip {
                 pub fn log(port: &u16) {
                     log_from_mod!("port", port);
                 }
-                // #[macro_export]
-                // macro_rules! log_ {
-                //     ($val:expr) => {
-                //         (log_from_mod!("port", $val))
-                //     }
-                // }
-                // pub use log;
             }
         }
     }
@@ -182,6 +155,7 @@ mod socket {
 
             pub const FALLBACK_GENERIC: SocketAddr = SocketAddr::V4(FALLBACK_V4);
         }
+        #[allow(dead_code)]
         pub(super) mod utils {
             use std::net::SocketAddrV4;
             pub fn log(addrv4: &SocketAddrV4) {
@@ -192,6 +166,7 @@ mod socket {
     }
 
     use super::SocketAddr::{self, V4, V6};
+    #[allow(dead_code)]
     pub fn log(socketaddr: &SocketAddr) {
         match socketaddr {
             V4(addrv4) => v4::utils::log(addrv4),
@@ -200,40 +175,7 @@ mod socket {
     }
 }
 
-mod tcp {
-    #[allow(unused_imports)]
-    use super::{socket, SocketAddr, TcpListener, TcpStream};
-    /// Creates a `TcpListener` by attempting to bind to the
-    /// passed `SocketAddr`.
-    ///
-    /// If the passed address can be bound to, the created
-    /// `TcpListener` will attempt to bind to it.
-    ///
-    /// If the passed address cant be bound to, `TcpListener`
-    /// will be bound to empty
-    pub fn listener(socketaddr: SocketAddr) -> TcpListener {
-        // println!("{} attempting to bind tcplistener", module_path!());
-
-        // Log info regarding binding
-        log_from_mod!("bind init");
-        socket::log(&socketaddr);
-
-        match socketaddr {
-            SocketAddr::V4(socket_address) => match TcpListener::bind(socket_address) {
-                Ok(tcplistener) => {
-                    log_from_mod!("bind successful");
-                    tcplistener
-                }
-                Err(e) => {
-                    elog_from_mod!("bind failed", e);
-                    elog_from_mod!("returning fallback tcplistener");
-                    TcpListener::bind(crate::socket::v4::addr::FALLBACK_V4).unwrap()
-                }
-            },
-            SocketAddr::V6(_socket_address) => unimplemented!(),
-        }
-    }
-}
+mod tcp;
 
 const GET_MAX_SIZE: usize = 1024;
 
@@ -245,23 +187,13 @@ fn handle_stream(tcp_stream: std::io::Result<TcpStream>) -> std::io::Result<()> 
         Ok(mut stream) => {
             log_from_mod!("new incoming connection");
             let mut stream_buffer = [0u8; GET_MAX_SIZE];
+
             let bytes_read = stream.read(&mut stream_buffer)?;
-            // let bytes_read = match stream.read(&mut stream_buffer) {
-            //     Ok(bytes_read) => {
-            //         // log_from_mod!("bytes read", bytes_read);
-            //         bytes_read
-            //     }
-            //     Err(e) => {
-            //         // elog_from_mod!("read failed", e);
-            //         0usize
-            //     }
-            // };
-            // let buffer = stream_buffer[0.._n_read];
+
             let req = http::Request::try_construct(&stream_buffer, bytes_read).unwrap();
-            // log_from_mod!("dumping request");
-            // req.log();
+
             let res = http::Response::try_from(req).unwrap();
-            // log_from_mod!("attempting response", res);
+
             let _n_written = stream.write(res.to_string().as_bytes())?;
             Ok(())
         }
@@ -269,15 +201,12 @@ fn handle_stream(tcp_stream: std::io::Result<TcpStream>) -> std::io::Result<()> 
     }
 }
 
-fn main() {
-    log_from_mod!("entering main");
-    // TODO: Make this more robust maybe CLI???
-    // Make the listener
-
-    let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC);
+fn main() -> std::io::Result<()> {
+    let tcp_listener = tcp::listener(socket::v4::addr::DEFAULT_GENERIC)?;
     for tcp_stream in tcp_listener.incoming() {
         std::thread::spawn(|| handle_stream(tcp_stream));
     }
+    Ok(())
 }
 // #[cfg(test)]
 // mod test {
