@@ -182,7 +182,8 @@ impl TryFrom<Request> for Response {
                                 .join("/");
                             log_from_mod!("looking for file {}", content);
                             let path = std::path::PathBuf::from(vec![directory, content].join("/"));
-                            match std::fs::read(path) {
+                            let abs_path = std::fs::canonicalize(path).unwrap_or_default();
+                            match std::fs::read(abs_path) {
                                 Ok(file_content) => {
                                     headers.push(ContentType(Plaintext));
                                     headers.push(ContentLength(file_content.len()));
