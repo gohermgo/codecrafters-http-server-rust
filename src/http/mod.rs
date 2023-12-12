@@ -64,6 +64,7 @@ impl Request {
         request_buffer: &[u8; MAX_BUFFER_SIZE],
         bytes_read: usize,
     ) -> Option<Self> {
+        log_from_mod!("Request::try_construct [enter]");
         let request_str = request_buffer[0..bytes_read]
             .iter()
             .map(|x| *x as char)
@@ -76,13 +77,15 @@ impl Request {
             request::Startline::from_str(request_lines.get(0usize).unwrap_or(&"")).ok();
         let headers = request_lines
             .iter()
-            .filter_map(|request_line| {
-                log_from_mod!("{}", request_line);
-                match str::parse::<header::Kind>(request_line) {
-                    Ok(h) => Some(h),
+            .filter_map(
+                |request_line| match str::parse::<header::Kind>(request_line) {
+                    Ok(h) => {
+                        log_from_mod!("Header: ", h.to_string());
+                        Some(h)
+                    }
                     Err(_e) => None,
-                }
-            })
+                },
+            )
             .collect::<Vec<header::Kind>>();
         let header_count = headers.len();
         let body = request_lines
@@ -90,6 +93,7 @@ impl Request {
             .enumerate()
             .filter_map(|(i, e)| {
                 if i.ge(&header_count) {
+                    log_from_mod!("Body: ", e);
                     Some(e.as_bytes().to_vec())
                 } else {
                     None
