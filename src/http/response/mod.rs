@@ -9,9 +9,9 @@ pub enum Status {
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Status::Ok => format!("{} OK", *self as u8),
-            Status::Created => format!("{} Created", *self as u8),
-            Status::NotFound => format!("{} NotFound", *self as u8),
+            Status::Ok => format!("{} OK", *self as isize),
+            Status::Created => format!("{} Created", *self as isize),
+            Status::NotFound => format!("{} NotFound", *self as isize),
         };
         fmt::write(f, format_args!("{}", s))
     }
