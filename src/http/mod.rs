@@ -314,8 +314,8 @@ impl TryFrom<Request> for Response {
                     panic!();
                 }
             },
-            (Get, _) => {
-                log_from_mod!("get unknown ({})", request_path_root.unwrap_or(&""));
+            (Get, Some(unknown)) => {
+                log_from_mod!("get unknown ({})", unknown);
                 status = response::Status::NotFound;
                 let start_line = response::Startline { version, status };
                 log_from_mod!("responding with {}", start_line.to_string());
@@ -325,6 +325,7 @@ impl TryFrom<Request> for Response {
                     body: None,
                 })
             }
+            (Get, None) => todo!(),
             (Post, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
                     let content = request_path_components
