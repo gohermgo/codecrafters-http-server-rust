@@ -79,10 +79,7 @@ impl Request {
             .filter_map(
                 |request_line| match str::parse::<header::Kind>(request_line) {
                     Ok(h) => Some(h),
-                    Err(e) => {
-                        elog_from_mod!("{}", e);
-                        None
-                    }
+                    Err(_e) => None,
                 },
             )
             .collect::<Vec<header::Kind>>();
@@ -220,6 +217,7 @@ impl TryFrom<Request> for Response {
 
         match (value.start_line.method, request_path_root) {
             (Get, _) if request_path.eq("/") => {
+                log_from_mod!("get index");
                 status = response::Status::Ok;
                 let start_line = response::Startline { version, status };
                 Ok(Self {
@@ -229,6 +227,7 @@ impl TryFrom<Request> for Response {
                 })
             }
             (Get, Some(&"echo")) => {
+                log_from_mod!("get echo");
                 let content = request_path_components
                     .into_iter()
                     .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
@@ -236,16 +235,13 @@ impl TryFrom<Request> for Response {
                     // .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                     .collect::<Vec<&str>>()
                     .join("/");
-                let content_length = content.len();
-                headers.push(ContentType(Plaintext));
-                headers.push(ContentLength(content_length));
-                body = Some(content);
-                status = response::Status::Ok;
-                let start_line = response::Startline { version, status };
                 Ok(Self {
-                    start_line,
-                    headers,
-                    body,
+                    start_line: response::Startline {
+                        version,
+                        status: response::Status::Ok,
+                    },
+                    headers: vec![ContentType(Plaintext), ContentLength(content.len())],
+                    body: Some(content),
                 })
             }
             (Get, Some(&"user-agent")) => {
@@ -307,7 +303,7 @@ impl TryFrom<Request> for Response {
                 status = response::Status::NotFound;
                 Ok(Self {
                     start_line: response::Startline { version, status },
-                    headers,
+                    headers: value.headers,
                     body,
                 })
             }
