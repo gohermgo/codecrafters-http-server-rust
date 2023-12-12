@@ -195,7 +195,7 @@ impl TryFrom<Request> for Response {
                             }
                             let buf = std::fs::read(path.clone())?;
                             let buf = buf.into_iter().filter(|x| x.ne(&0u8)).collect::<Vec<u8>>();
-                            let buf_str = String::from_utf8(buf)?;
+                            let buf_str = String::from_utf8(buf).unwrap_or_default();
                             log_from_mod!("{}", buf_str);
                             match std::fs::read_dir(path) {
                                 Ok(mut directory_content) => {
