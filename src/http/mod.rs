@@ -174,7 +174,7 @@ impl TryFrom<Request> for Response {
                             status = response::Status::Ok;
                         }
                         Some(root) if root.eq(&String::from("files")) => {
-                            let directory = std::env::args().nth(0usize).unwrap_or("/".to_string());
+                            let directory = std::env::args().nth(1usize).unwrap_or("/".to_string());
                             log_from_mod!("got directory {}", directory);
                             let content = request_components
                                 .into_iter()
