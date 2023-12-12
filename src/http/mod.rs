@@ -57,7 +57,7 @@ pub type Header = crate::http::header::Kind;
 pub struct Request {
     start_line: request::Startline,
     headers: Vec<Header>,
-    body: Vec<u8>,
+    body: Option<Vec<u8>>,
 }
 impl Request {
     pub fn try_construct(
@@ -102,10 +102,18 @@ impl Request {
             .flatten()
             .collect::<Vec<u8>>();
         if let Some(start_line) = start_line {
-            let request = Request {
-                start_line,
-                headers,
-                body,
+            let request = if body.len() > 0usize {
+                Request {
+                    start_line,
+                    headers,
+                    body: Some(body),
+                }
+            } else {
+                Request {
+                    start_line,
+                    headers,
+                    body: None,
+                }
             };
             Some(request)
         } else {
@@ -324,15 +332,24 @@ impl TryFrom<Request> for Response {
                         .join("/");
                     let file_string = vec![directory, content].join("/");
                     let path = std::path::PathBuf::from(file_string);
-                    headers.push(ContentType(header::content_type::Kind::Plaintext));
-                    headers.push(ContentLength(value.body.len()));
-                    std::fs::write(path, value.body)?;
-                    let start_line = response::Startline { version, status };
-                    Ok(Self {
-                        start_line,
-                        headers,
-                        body,
-                    })
+                    match value.body {
+                        Some(body) => {
+                            std::fs::write(path, body.clone())?;
+                            headers.push(ContentType(header::content_type::Kind::Plaintext));
+                            headers.push(ContentLength(body.len()));
+                            let start_line = response::Startline { version, status };
+                            Ok(Self {
+                                start_line,
+                                headers,
+                                body: None,
+                            })
+                        }
+                        None => Ok(Self {
+                            start_line: response::Startline { version, status },
+                            headers: vec![],
+                            body: None,
+                        }),
+                    }
                 }
                 None => {
                     panic!()
