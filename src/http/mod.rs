@@ -87,12 +87,12 @@ impl Request {
                 },
             )
             .collect::<Vec<header::Kind>>();
-        let header_count = headers.len();
+        // number of header lines plus 1 for start line
+        let body_offset = headers.len() + 1;
         let body = request_lines
             .iter()
-            .enumerate()
-            .filter_map(|(i, e)| {
-                if i.ge(&header_count) {
+            .filter_map_i(|(i, e)| {
+                if i.ge(&body_offset) {
                     log_from_mod!("Body: ", e);
                     Some(e.as_bytes().to_vec())
                 } else {
