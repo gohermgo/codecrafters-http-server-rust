@@ -246,6 +246,7 @@ impl TryFrom<Request> for Response {
                 })
             }
             (Get, Some(&"user-agent")) => {
+                log_from_mod!("get user agent");
                 let content = value
                     .headers
                     .iter()
@@ -268,6 +269,7 @@ impl TryFrom<Request> for Response {
             }
             (Get, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
+                    log_from_mod!("get files");
                     let content = request_path_components
                         .into_iter()
                         .enumerate()
@@ -301,6 +303,7 @@ impl TryFrom<Request> for Response {
                 }
             },
             (Get, _) => {
+                log_from_mod!("get unknown");
                 status = response::Status::NotFound;
                 Ok(Self {
                     start_line: response::Startline { version, status },
