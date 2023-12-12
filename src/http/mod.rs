@@ -173,12 +173,14 @@ impl TryFrom<Request> for Response {
                         }
                         Some(root) if root.eq(&String::from("files")) => {
                             let directory = std::env::args().nth(0usize).unwrap_or("/".to_string());
+                            log_from_mod!("got directory {}", directory);
                             let content = request_components
                                 .into_iter()
                                 .enumerate()
                                 .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                                 .collect::<Vec<&str>>()
                                 .join("/");
+                            log_from_mod!("looking for file {}", content);
                             let path = std::path::PathBuf::from(vec![directory, content].join("/"));
                             match std::fs::read(path) {
                                 Ok(file_content) => {
