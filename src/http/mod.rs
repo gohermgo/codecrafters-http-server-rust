@@ -191,6 +191,7 @@ impl TryFrom<Request> for Response {
                                     status = response::Status::Ok;
                                 }
                                 Err(_e) => {
+                                    elog_from_mod!("{}", _e);
                                     status = response::Status::NotFound;
                                 }
                             };
