@@ -193,8 +193,10 @@ impl TryFrom<Request> for Response {
                             } else {
                                 log_from_mod!("not sure")
                             }
-                            let read_string = std::fs::read_to_string(path.clone())?;
-                            log_from_mod!("read {}", read_string);
+                            let buf = std::fs::read(path.clone())?;
+                            for bytes in buf {
+                                log_from_mod!("{}", bytes);
+                            }
                             match std::fs::read_dir(path) {
                                 Ok(mut directory_content) => {
                                     match directory_content.find(|x| match x {
