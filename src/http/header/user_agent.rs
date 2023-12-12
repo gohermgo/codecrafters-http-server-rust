@@ -15,6 +15,7 @@ pub enum Kind {
     /// Any user agent
     Any(String),
     /// Unrecognized
+    #[allow(dead_code)]
     Unrecognized,
 }
 impl Display for Kind {
@@ -30,6 +31,7 @@ impl Display for Kind {
     }
 }
 
+#[allow(dead_code)]
 const UNRECOGNIZED_USER_AGENT: Header = Header::UserAgent(Kind::Unrecognized);
 
 impl FromStr for Kind {

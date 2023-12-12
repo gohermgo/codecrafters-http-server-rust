@@ -7,6 +7,7 @@ pub enum Error {
     /// Errors related to parsing headers
     Parse(Header, String),
     /// Errors related to parsing format of headers
+    #[allow(dead_code)]
     ParseFormat(Header, String),
     /// Errors related to unrecognized headers
     Unrecognized(String),

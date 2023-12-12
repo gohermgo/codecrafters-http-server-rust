@@ -244,34 +244,25 @@ fn handle_stream(tcp_stream: std::io::Result<TcpStream>) -> std::io::Result<()> 
     match tcp_stream {
         Ok(mut stream) => {
             log_from_mod!("new incoming connection");
-
             let mut stream_buffer = [0u8; GET_MAX_SIZE];
-            let bytes_read = match stream.read(&mut stream_buffer) {
-                Ok(bytes_read) => {
-                    log_from_mod!("bytes read", bytes_read);
-                    bytes_read
-                }
-                Err(e) => {
-                    elog_from_mod!("read failed", e);
-                    0usize
-                }
-            };
+            let bytes_read = stream.read(&mut stream_buffer)?;
+            // let bytes_read = match stream.read(&mut stream_buffer) {
+            //     Ok(bytes_read) => {
+            //         // log_from_mod!("bytes read", bytes_read);
+            //         bytes_read
+            //     }
+            //     Err(e) => {
+            //         // elog_from_mod!("read failed", e);
+            //         0usize
+            //     }
+            // };
             // let buffer = stream_buffer[0.._n_read];
             let req = http::Request::try_construct(&stream_buffer, bytes_read).unwrap();
             // log_from_mod!("dumping request");
             // req.log();
             let res = http::Response::try_from(req).unwrap();
-            log_from_mod!("attempting response", res);
-            let _n_written = match stream.write(res.to_string().as_bytes()) {
-                Ok(bytes_written) => {
-                    log_from_mod!("bytes written", bytes_written);
-                    bytes_written
-                }
-                Err(e) => {
-                    elog_from_mod!("write failed", e);
-                    0usize
-                }
-            };
+            // log_from_mod!("attempting response", res);
+            let _n_written = stream.write(res.to_string().as_bytes())?;
             Ok(())
         }
         Err(e) => Err(e),
