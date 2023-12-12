@@ -1,3 +1,5 @@
+use std::ffi::OsString;
+
 mod error;
 pub(crate) mod header;
 pub(crate) mod request;
@@ -180,17 +182,32 @@ impl TryFrom<Request> for Response {
                                 .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                                 .collect::<Vec<&str>>()
                                 .join("/");
-                            let path_string = vec![directory, content].join("/");
+                            // let path_string = vec![directory, content].join("/");
 
-                            log_from_mod!("looking for file {:#?}", path_string.clone());
-                            let path = std::path::PathBuf::from(path_string);
-                            match std::fs::read(path) {
-                                Ok(file_content) => {
-                                    headers.push(ContentType(Plaintext));
-                                    headers.push(ContentLength(file_content.len()));
-                                    body =
-                                        Some(String::from_utf8(file_content).unwrap_or_default());
-                                    status = response::Status::Ok;
+                            // log_from_mod!("looking for file {:#?}", path_string.clone());
+                            let path = std::path::PathBuf::from(directory);
+                            match std::fs::read_dir(path) {
+                                Ok(mut directory_content) => {
+                                    match directory_content.find(|x| match x {
+                                        Ok(dir_entry) => dir_entry
+                                            .file_name()
+                                            .eq(&OsString::from(content.clone())),
+                                        _ => false,
+                                    }) {
+                                        Some(file) => {
+                                            let file_content = std::fs::read(file.unwrap().path())
+                                                .unwrap_or_default();
+                                            headers.push(ContentType(Plaintext));
+                                            headers.push(ContentLength(file_content.len()));
+                                            body = Some(
+                                                String::from_utf8(file_content).unwrap_or_default(),
+                                            );
+                                            status = response::Status::Ok;
+                                        }
+                                        None => {
+                                            status = response::Status::NotFound;
+                                        }
+                                    }
                                 }
                                 Err(_e) => {
                                     elog_from_mod!("{}", _e);
