@@ -245,7 +245,8 @@ impl TryFrom<Request> for Response {
                 log_from_mod!("get echo");
                 let content = request_path_components
                     .into_iter()
-                    .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                    .filter(|e| e.ne(&"echo"))
+                    // .filter_map_i(|(i, e)| if i.gt(&1usize) { Some(e) } else { None })
                     // .enumerate()
                     // .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
                     .collect::<Vec<&str>>()
