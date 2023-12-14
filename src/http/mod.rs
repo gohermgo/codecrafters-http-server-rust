@@ -226,7 +226,7 @@ impl TryFrom<Request> for Response {
         let mut body = None;
         let request_path = value.start_line.target.path.clone();
         let request_path_components = request_path.split('/').into_iter().collect::<Vec<&str>>();
-        let request_path_root = request_path_components.get(0usize);
+        let request_path_root = request_path_components.get(1usize);
         if let Some(root) = request_path_root.cloned() {
             log_from_mod!("root", root);
         };
