@@ -230,8 +230,10 @@ impl TryFrom<Request> for Response {
         let request_path_remainder = request_path_components
             .clone()
             .into_iter()
+            .filter(|e| !e.is_empty())
             .filter_map_i(|(i, e)| {
-                if i.ge(&1usize) && !e.is_empty() {
+                if i.ge(&1usize) {
+                    log_from_mod!("remainder", e);
                     Some(e)
                 } else {
                     None
