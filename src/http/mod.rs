@@ -1,17 +1,12 @@
+use error::Error;
+#[allow(unused_imports)]
+use std::{fmt, io::Write, path::PathBuf, str::FromStr};
+
 mod error;
 pub(crate) mod header;
 pub(crate) mod request;
 pub(crate) mod response;
 
-#[allow(unused_imports)]
-use {
-    error::Error,
-    std::{
-        fmt::{self, Display, Formatter, Write},
-        path::PathBuf,
-        str::FromStr,
-    },
-};
 #[allow(dead_code)]
 const OK: &str = "HTTP/1.1 200 OK\r\n";
 #[allow(dead_code)]
@@ -21,8 +16,8 @@ const MAX_BUFFER_SIZE: usize = 1024;
 /// Struct to handle HTTP version
 #[derive(Copy, Clone, Debug)]
 pub struct Version(u8, Option<u8>);
-impl Display for Version {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.1 {
             Some(1u8) => fmt::write(f, format_args!("HTTP/1.1")),
             None => fmt::write(f, format_args!("HTTP/2")),
@@ -121,8 +116,8 @@ impl Request {
         }
     }
 }
-impl Display for Response {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let headers = self
             .headers
             .clone()
@@ -339,6 +334,7 @@ impl TryFrom<Request> for Response {
             (Get, None) => todo!(),
             (Post, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
+                    log_from_mod!("post files");
                     let content = request_path_components
                         .into_iter()
                         .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
@@ -348,13 +344,21 @@ impl TryFrom<Request> for Response {
                     let path = std::path::PathBuf::from(file_string);
                     match value.body {
                         Some(body) => {
-                            std::fs::write(path, body.clone())?;
-                            headers.push(ContentType(header::content_type::Kind::Plaintext));
-                            headers.push(ContentLength(body.len()));
-                            let start_line = response::Startline { version, status };
+                            let mut file = std::fs::File::create(path)?;
+                            let bytes_written = file.write(&body)?;
+                            // std::fs::write(path, body.clone())?;
+                            // headers.push(ContentType(header::content_type::Kind::Plaintext));
+                            // headers.push(ContentLength(body.len()));
+                            // let start_line = response::Startline { version, status };
                             Ok(Self {
-                                start_line,
-                                headers,
+                                start_line: response::Startline {
+                                    version,
+                                    status: response::Status::Created,
+                                },
+                                headers: vec![
+                                    ContentType(header::content_type::Kind::Plaintext),
+                                    ContentLength(bytes_written),
+                                ],
                                 body: None,
                             })
                         }
