@@ -335,12 +335,14 @@ impl TryFrom<Request> for Response {
             (Post, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
                     log_from_mod!("post files");
-                    let content = request_path_components
-                        .into_iter()
-                        .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                        .collect::<Vec<&str>>()
-                        .join("/");
+                    // let content = request_path_components
+                    //     .into_iter()
+                    //     .filter_map_i(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                    //     .collect::<Vec<&str>>()
+                    //     .join("/");
+                    let content = request_path_remainder.join("/");
                     let file_string = vec![directory, content].join("/");
+                    log_from_mod!("post path", file_string.clone());
                     let path = std::path::PathBuf::from(file_string);
                     match value.body {
                         Some(body) => {
