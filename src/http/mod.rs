@@ -227,7 +227,9 @@ impl TryFrom<Request> for Response {
         let request_path = value.start_line.target.path.clone();
         let request_path_components = request_path.split('/').into_iter().collect::<Vec<&str>>();
         let request_path_root = request_path_components.get(0usize);
-
+        if let Some(root) = request_path_root.cloned() {
+            log_from_mod!("root", root);
+        };
         match (value.start_line.method, request_path_root) {
             (Get, _) if request_path.eq("/") => {
                 log_from_mod!("get index");
