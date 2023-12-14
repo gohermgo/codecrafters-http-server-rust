@@ -318,7 +318,7 @@ impl TryFrom<Request> for Response {
                 log_from_mod!("get unknown", unknown);
                 status = response::Status::NotFound;
                 let start_line = response::Startline { version, status };
-                log_from_mod!("responding with {}", start_line.to_string());
+                log_from_mod!("responding with", start_line.to_string());
                 Ok(Self {
                     start_line: response::Startline { version, status },
                     headers: value.headers,
