@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::io::{self, Write};
 use std::net;
 #[allow(unused_imports)]
@@ -37,7 +38,7 @@ macro_rules! log_from_mod {
         let stdout = std::io::stdout();
         let mut handle = stdout.lock();
 
-        let s = format!("[{} {}] {}: {}", line!(), module_path!(), $msg, $val);
+        let s = format!("[{} {}] {}: {}\n", line!(), module_path!(), $msg, $val);
         let _ = std::io::Write::write_all(&mut handle, s.as_bytes());
     };
     ( $mgs:literal, $( $val:expr ),* ) => {
@@ -49,7 +50,7 @@ macro_rules! log_from_mod {
         let stdout = std::io::stdout();
         let mut handle = stdout.lock();
 
-        let s = format!("[{} {}] {}: {}", line!(), module_path!(), $msg, $val)
+        let s = format!("[{} {}] {}: {}\n", line!(), module_path!(), $msg, $val)
         let _ = std::io::Write::write_all(&mut handle, s.as_bytes());
     };
     ($msg:literal) => {

@@ -230,10 +230,8 @@ impl TryFrom<Request> for Response {
         let request_path_remainder = request_path_components
             .clone()
             .into_iter()
-            .filter(|e| !e.is_empty())
             .filter_map_i(|(i, e)| {
-                if i.ge(&1usize) {
-                    log_from_mod!("remainder", e);
+                if i.ge(&1usize) && !e.is_empty() {
                     Some(e)
                 } else {
                     None
@@ -299,12 +297,13 @@ impl TryFrom<Request> for Response {
             (Get, Some(&"files")) => match std::env::args().nth(2usize) {
                 Some(directory) => {
                     log_from_mod!("get files");
-                    let content = request_path_components
-                        .into_iter()
-                        .enumerate()
-                        .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                        .collect::<Vec<&str>>()
-                        .join("/");
+                    // let content = request_path_components
+                    //     .into_iter()
+                    //     .enumerate()
+                    //     .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                    //     .collect::<Vec<&str>>()
+                    //     .join("/");
+                    let content = request_path_remainder.join("/");
                     let file_string = vec![directory, content].join("/");
                     log_from_mod!("{}", file_string.clone());
                     let path = std::path::PathBuf::from(file_string);

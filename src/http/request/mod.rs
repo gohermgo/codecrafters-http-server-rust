@@ -140,6 +140,7 @@ impl FromStr for Startline {
     }
 }
 impl Startline {
+    #[allow(dead_code)]
     pub(super) fn try_parse(start_line: &str) -> Option<Self> {
         let mut components = start_line.split_whitespace();
         if components.clone().count() != 3 {
