@@ -230,13 +230,8 @@ impl TryFrom<Request> for Response {
         let request_path_remainder = request_path_components
             .clone()
             .into_iter()
-            .filter_map_i(|(i, e)| {
-                if i.ge(&1usize) && !e.is_empty() {
-                    Some(e)
-                } else {
-                    None
-                }
-            })
+            .filter(|e| !e.is_empty())
+            .filter_map_i(|(i, e)| if i.ge(&1usize) { Some(e) } else { None })
             .collect::<Vec<&str>>();
         if let Some(root) = request_path_root.cloned() {
             log_from_mod!("root", root);
