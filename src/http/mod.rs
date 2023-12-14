@@ -227,6 +227,11 @@ impl TryFrom<Request> for Response {
         let request_path = value.start_line.target.path.clone();
         let request_path_components = request_path.split('/').into_iter().collect::<Vec<&str>>();
         let request_path_root = request_path_components.get(1usize);
+        let request_path_remainder = request_path_components
+            .clone()
+            .into_iter()
+            .filter_map_i(|(i, e)| if i.gt(&0usize) { Some(e) } else { None })
+            .collect::<Vec<&str>>();
         if let Some(root) = request_path_root.cloned() {
             log_from_mod!("root", root);
         };
@@ -243,14 +248,15 @@ impl TryFrom<Request> for Response {
             }
             (Get, Some(&"echo")) => {
                 log_from_mod!("get echo");
-                let content = request_path_components
-                    .into_iter()
-                    .filter(|e| e.ne(&"echo"))
-                    // .filter_map_i(|(i, e)| if i.gt(&1usize) { Some(e) } else { None })
-                    // .enumerate()
-                    // .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
-                    .collect::<Vec<&str>>()
-                    .join("/");
+                // let content = request_path_components
+                //     .into_iter()
+                //     .filter(|e| e.ne(&"echo"))
+                //     // .filter_map_i(|(i, e)| if i.gt(&1usize) { Some(e) } else { None })
+                //     // .enumerate()
+                //     // .filter_map(|(i, e)| if i.ne(&0usize) { Some(e) } else { None })
+                //     .collect::<Vec<&str>>()
+                //     .join("/");
+                let content = request_path_remainder.join("/");
                 Ok(Self {
                     start_line: response::Startline {
                         version,
